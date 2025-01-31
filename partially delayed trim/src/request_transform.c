@@ -88,9 +88,9 @@ void ReqTransNvmeToSliceForDSM(unsigned int cmdSlotTag, unsigned int nr)
 	reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag = cmdSlotTag;
 	if (trim_flag == 0)
 	{
+		trim_flag = 1;
 		reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = LSA_DSM;
 		trim_LSA = LSA_DSM - 1;
-		trim_flag = 1;
 	}
 	else
 	{
@@ -902,83 +902,10 @@ void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int 
 	}
 }
 
-//void PerformDeallocation(unsigned int reqSlotTag)
-//{
-//	unsigned int slsa, elsa, start_index, end_index, temp;
-//	unsigned long long start_mask, end_mask;
-//	int tempval, tempval2;
-//	unsigned int tail = dsmRangePtr->tail;
-//	unsigned int *devAddr = (unsigned int*)GenerateDataBufAddr(reqSlotTag);
-//	unsigned int nr = reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nr;
-//	xil_printf("PerformDeallocation nr : %d\r\n",nr);
-//	temp = tail;
-//	for (int i=temp; i<=(temp+nr); i++)
-//	{
-//		tempval = *(devAddr + 1);
-//		tempval2 = *(devAddr + 2);
-//		xil_printf("tempval1: %d\r\n", tempval);
-//		xil_printf("tempval2: %d\r\n", tempval2);
-//		if (((SLICES_PER_SSD * 4) < tempval) || ((SLICES_PER_SSD * 4) < tempval2) || (tempval<0)||(tempval2<0))
-//		{
-//			break;
-//		}
-//		nr_sum++;
-//		int left = 0;
-//		int right = (dsmRangePtr->tail >= dsmRangePtr->head) ? (dsmRangePtr->tail - dsmRangePtr->head) : (3000 - dsmRangePtr->head + dsmRangePtr->tail);
-//		int insert_pos = dsmRangePtr->tail;
-//
-//
-//		dsmRangePtr->dmRange[i].lengthInLogicalBlocks = tempval;
-//		dsmRangePtr->dmRange[i].startingLBA[0] = tempval2;
-//		xil_printf("saved tempval1: %d\r\n", dsmRangePtr->dmRange[i].startingLBA[0]);
-//		xil_printf("saved tempval2: %d\r\n", dsmRangePtr->dmRange[i].lengthInLogicalBlocks);
-//		slsa = dsmRangePtr->dmRange[i].startingLBA[0]/4;
-//		elsa = (dsmRangePtr->dmRange[i].startingLBA[0] + dsmRangePtr->dmRange[i].lengthInLogicalBlocks - 1)/4;
-//
-//		start_index = slsa / 64;
-//		end_index = elsa / 64;
-//
-//		unsigned int upper32 = (unsigned int)(~0ULL >> 32);
-//		unsigned int lower32  = (unsigned int)(~0ULL & 0xFFFFFFFF);
-//		xil_printf("~0ULL upper 32 bits : %u\r\n", upper32);
-//		xil_printf("~0ULL lower 32 bits : %u\r\n", lower32);
-//		start_mask = ~0ULL << (slsa % 64);
-//		end_mask = ~0ULL >> (64 - ((elsa % 64)+1));
-//		if (start_index == end_index)
-//		{
-//			asyncTrimBitMapPtr->trimBitMap[start_index] |= (start_mask & end_mask);
-//		}
-//		else
-//		{
-//			asyncTrimBitMapPtr->trimBitMap[start_index] |= start_mask;
-//			asyncTrimBitMapPtr->trimBitMap[end_index] |= end_mask;
-//			for (int i = start_index + 1; i < end_index; i++)
-//			{
-//				asyncTrimBitMapPtr->trimBitMap[i] = ~0ULL;
-//			}
-//		}
-//
-//		dsmRangePtr->tail = (dsmRangePtr->tail + 1)%3000;
-//		if(dsmRangePtr->tail == dsmRangePtr->head)
-//		{
-//			xil_printf("tail head meet \r\n");
-//			if(dsmRangePtr->head==2999)
-//			{
-//				dsmRangePtr->head = 0;
-//			}
-//			else
-//			{
-//				dsmRangePtr->head += 1;
-//			}
-//		}
-//		devAddr += 4;
-//	}
-//}
-
 void PerformDeallocation(unsigned int reqSlotTag)
 {
     int tempval, tempval2;
-    unsigned int tail = dsmRangePtr->tail;
+    unsigned int newEntry;
     unsigned int *devAddr = (unsigned int*)GenerateDataBufAddr(reqSlotTag);
     unsigned int nr = reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nr;
 
@@ -996,49 +923,13 @@ void PerformDeallocation(unsigned int reqSlotTag)
 
         nr_sum++;
 
-        // Binary search to find the correct position to insert
-        int left = 0;
-        int right = (dsmRangePtr->tail - dsmRangePtr->head + 3000) % 3000;
-        int insert_pos;
-
-        while (left < right)
-        {
-            int mid = (left + right) / 2;
-            int mid_index = (dsmRangePtr->head + mid) % 3000;
-            if (dsmRangePtr->dmRange[mid_index].lengthInLogicalBlocks > tempval)
-            {
-                left = mid + 1;
-            }
-            else if (dsmRangePtr->dmRange[mid_index].lengthInLogicalBlocks == tempval)
-            {
-                left = mid + 1; // Place after the same value
-                break;
-            }
-            else
-            {
-                right = mid;
-            }
-        }
-        insert_pos = (dsmRangePtr->head + left) % 3000;
-
-        // Update the tail pointer
-        dsmRangePtr->tail = (dsmRangePtr->tail + 1) % 3000;
-
-        // Handle overflow when head meets tail
-        if (dsmRangePtr->tail == dsmRangePtr->head)
-        {
-        	dsmRangePtr->tail = (dsmRangePtr->tail - 1 + 3000) % 3000;
-        }
-
-        // Shift elements to make room for the new entry
-        for (int j = dsmRangePtr->tail -1 ; j != insert_pos; j = (j - 1 + 3000) % 3000)
-        {
-            dsmRangePtr->dmRange[j] = dsmRangePtr->dmRange[(j - 1 + 3000) % 3000];
-        }
-
-        // Insert the new entry
-        dsmRangePtr->dmRange[insert_pos].lengthInLogicalBlocks = tempval;
-        dsmRangePtr->dmRange[insert_pos].startingLBA[0] = tempval2;
+        newEntry = AllocateDSMBuf();
+        xil_printf("newEntry: %u\r\n", newEntry);
+        dsmRangePtr->dsmRange[newEntry].lengthInLogicalBlocks = tempval;
+        dsmRangePtr->dsmRange[newEntry].startingLBA[0] = tempval2;
+        PutToDsmRangeHashList(newEntry);
+        xil_printf("length: %u\r\n", dsmRangePtr->dsmRange[newEntry].lengthInLogicalBlocks);
+//        xil_printf("start lba: %u\r\n", dsmRangePtr->dsmRange[newEntry].startingLBA[0]);
 
         devAddr += 4;
     }

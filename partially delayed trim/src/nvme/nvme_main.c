@@ -77,6 +77,7 @@ void nvme_main()
 	unsigned int exeLlr;
 	unsigned int rstCnt = 0;
 	trim_flag = 0;
+	trim_perf_flag = 0;
 	trimDmaCnt = 0;
 	trim_cnt = 0;
 	gc_cnt = 0;
@@ -203,10 +204,11 @@ void nvme_main()
 			SchedulingNandReq();
 		}
 
-		if(trim_flag != 0)
+		if(trim_perf_flag != 0)
 		{
 			time_cnt++;
-			if (time_cnt == 20000000)
+//			if (time_cnt == 20000000)
+			if (time_cnt > 0)
 			{
 				time_cnt = 0;
 				handle_asyncTrim(0);

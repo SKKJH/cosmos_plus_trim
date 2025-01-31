@@ -139,24 +139,37 @@ void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND 
 void handle_asyncTrim(int forced)
 {
 	int blk0, blk1, blk2, blk3, tempSlba , tempNlb;
-	int head, nlb, slba, temp;
+	int nlb, slba, bufEntry, hashIndex;
+	unsigned int nextEntry;
+	bufEntry = DATA_BUF_NONE;
 
-	if ((forced == 1) && (nr_sum > 10))
-		temp = 10;
-	else
-		temp = nr_sum;
-
-	for (int i=0; i<temp; i++)
+	for (int j = 20; 0 <= j; j--)
 	{
-		head = dsmRangePtr->head;
-		slba = dsmRangePtr->dmRange[head].startingLBA[0];
-		nlb = dsmRangePtr->dmRange[head].lengthInLogicalBlocks;
+		if (dsmRangeHashTable->Range_Flag[j] == 1)
+		{
+			bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
+			xil_printf("Break hash index: %d\r\n", j);
+			hashIndex = j;
+			break;
+		}
+	}
+
+	while(bufEntry != DATA_BUF_NONE)
+	{
+		slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
+		nlb = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
+		xil_printf("handle_asyncTrim SelectiveGetFromDsmRangeHashList\r\n");
+		xil_printf("bufEntry: %d\r\n", bufEntry);
+
+		nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
+		xil_printf("nextEntry1: %u\r\n", nextEntry);
+
+		SelectiveGetFromDsmRangeHashList(bufEntry);
 		blk0 = 1;
 		blk1 = 1;
 		blk2 = 1;
 		blk3 = 1;
 
-//		xil_printf("nr_sum : %d\r\n",nr_sum);
 //		xil_printf("nlb : %d\r\n",nlb);
 //		xil_printf("slba : %d\r\n",slba);
 
@@ -265,19 +278,39 @@ void handle_asyncTrim(int forced)
 				cmd_by_trim = check_nvme_cmd_come();
 				if(cmd_by_trim == 1)
 				{
-//					xil_printf("new io cmd requested\r\n");
 					return;
 				}
 			}
 		}
-		dsmRangePtr->head = (dsmRangePtr->head + 1)%3000;
-		nr_sum--;
+		if ((hashIndex == 0) && dsmRangeHashTable->dsmRangeHash[hashIndex].headEntry == DATA_BUF_NONE)
+			bufEntry = DATA_BUF_NONE;
+		else
+		{
+			int tmpindex = hashIndex;
+			if(nextEntry == DATA_BUF_NONE)
+			{
+				for (int j = tmpindex; 0 < j; j--)
+				{
+					if (dsmRangeHashTable->Range_Flag[j] == 1)
+					{
+						bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
+						hashIndex = j;
+						break;
+					}
+					bufEntry = DATA_BUF_NONE;
+				}
+			}
+			else
+				bufEntry = nextEntry;
+		}
 	}
 
+	for (int i = 0; i < BITMAP_SIZE; i++)
+		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
+
 	trim_flag = 0;
+	trim_perf_flag = 0;
 	nr_sum = 0;
-	dsmRangePtr->head = 0;
-	dsmRangePtr->tail = 0;
 }
 
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)

@@ -52,6 +52,7 @@
 #define BITMAP_SIZE 									(USER_PAGES_PER_SSD/64)
 
 #define AVAILABLE_DATA_BUFFER_ENTRY_COUNT				(16 * USER_DIES)
+#define AVAILABLE_DSM_RANGE_ENTRY_COUNT					1024
 #define AVAILABLE_TEMPORARY_DATA_BUFFER_ENTRY_COUNT		(USER_DIES)
 
 #define DATA_BUF_NONE	0xffff
@@ -62,9 +63,38 @@
 #define FindDataBufHashTableEntry(logicalSliceAddr) ((logicalSliceAddr) % AVAILABLE_DATA_BUFFER_ENTRY_COUNT)
 
 typedef struct _ASYNC_TRIM_BIT_MAP {
-//	unsigned long long trimBitMap[BITMAP_SIZE];
 	unsigned long long writeBitMap[BITMAP_SIZE];
 } ASYNC_TRIM_BIT_MAP, *P_ASYNC_TRIM_BIT_MAP;
+
+typedef struct _DATASET_MANAGEMENT_RANGE
+{
+	DSMRangeUnion ContextAttributes;
+	unsigned int lengthInLogicalBlocks;
+	unsigned int startingLBA[2];
+	unsigned int prevEntry : 16;
+	unsigned int nextEntry : 16;
+	unsigned int hashPrevEntry : 16;
+	unsigned int hashNextEntry : 16;
+} DATASET_MANAGEMENT_RANGE;
+
+typedef struct _DSM_RANGE{
+	DATASET_MANAGEMENT_RANGE dsmRange[AVAILABLE_DSM_RANGE_ENTRY_COUNT];
+} DSM_RANGE, *P_DSM_RANGE;
+
+typedef struct _DSM_RANGE_LRU_LIST {
+	unsigned int headEntry : 16;
+	unsigned int tailEntry : 16;
+} DSM_RANGE_LRU_LIST, *P_DSM_RANGE_LRU_LIST;
+
+typedef struct _DSM_RANGE_HASH_ENTRY{
+	unsigned int headEntry : 16;
+	unsigned int tailEntry : 16;
+} DSM_RAGNGE_HASH_ENTRY, *P_DSM_RANGE_HASH_ENTRY;
+
+typedef struct _DSM_RANGE_HASH_TABLE{
+	DSM_RAGNGE_HASH_ENTRY dsmRangeHash[21];
+	unsigned int Range_Flag[21];
+} DSM_RANGE_HASH_TABLE, *P_DSM_RANGE_HASH_TABLE;
 
 typedef struct _DATA_BUF_ENTRY {
 	unsigned int logicalSliceAddr : 28;
@@ -95,11 +125,9 @@ typedef struct _DATA_BUF_HASH_ENTRY{
 	unsigned int tailEntry : 16;
 } DATA_BUF_HASH_ENTRY, *P_DATA_BUF_HASH_ENTRY;
 
-
 typedef struct _DATA_BUF_HASH_TABLE{
 	DATA_BUF_HASH_ENTRY dataBufHash[AVAILABLE_DATA_BUFFER_ENTRY_COUNT];
 } DATA_BUF_HASH_TABLE, *P_DATA_BUF_HASH_TABLE;
-
 
 typedef struct _TEMPORARY_DATA_BUF_ENTRY {
 	unsigned int blockingReqTail : 16;
@@ -114,13 +142,24 @@ void InitDataBuf();
 unsigned int CheckDataBufHit(unsigned int reqSlotTag);
 unsigned int CheckDataBufHitbyLSA(unsigned int logicalSliceAddr);
 unsigned int AllocateDataBuf();
+unsigned int AllocateDSMBuf();
 void UpdateDataBufEntryInfoBlockingReq(unsigned int bufEntry, unsigned int reqSlotTag);
 
 unsigned int AllocateTempDataBuf(unsigned int dieNo);
 void UpdateTempDataBufEntryInfoBlockingReq(unsigned int bufEntry, unsigned int reqSlotTag);
 
 void PutToDataBufHashList(unsigned int bufEntry);
+void PutDSMBuftoLRUList(unsigned int bufEntry);
+void PutToDsmRangeHashList(unsigned int bufEntry);
 void SelectiveGetFromDataBufHashList(unsigned int bufEntry);
+
+void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry);
+unsigned int FindDsmRangeHashTableEntry(unsigned int length);
+unsigned int SmallestDSMBuftoLRUList();
+
+extern P_DSM_RANGE dsmRangePtr;
+extern DSM_RANGE_LRU_LIST dsmRangeLruList;
+extern P_DSM_RANGE_HASH_TABLE dsmRangeHashTable;
 
 extern P_DATA_BUF_MAP dataBufMapPtr;
 extern DATA_BUF_LRU_LIST dataBufLruList;

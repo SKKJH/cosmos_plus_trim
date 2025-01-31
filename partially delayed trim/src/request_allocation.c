@@ -46,6 +46,7 @@
 #include "xil_printf.h"
 #include <assert.h>
 #include "memory_map.h"
+#include "nvme/nvme.h"
 
 P_REQ_POOL reqPoolPtr;
 FREE_REQUEST_QUEUE freeReqQ;
@@ -384,17 +385,12 @@ void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
 	if (trim_flag == 1)
 	{
 		if (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM)
-		{	//if DMA for trim is done, do trim
+		{
+			trim_perf_flag = 1;
+			//if DMA for trim is done, do trim
 			trimDmaCnt--;
 			PerformDeallocation(reqSlotTag);
 		}
-//		else if ((reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_WRITE) && (reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag == 1))
-//		{
-//			int lpn = reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr;
-//			long long unsigned mask = ~(1ULL << lpn%64);
-//			asyncTrimBitMapPtr->trimBitMap[lpn/64] &= mask;
-
-//		}
 	}
 
 	PutToFreeReqQ(reqSlotTag);

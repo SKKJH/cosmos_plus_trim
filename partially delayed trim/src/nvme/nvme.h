@@ -806,19 +806,6 @@ typedef union _DSMRangeUnion
 	DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES contextAttributes;
 } DSMRangeUnion;
 
-typedef struct _DATASET_MANAGEMENT_RANGE
-{
-	DSMRangeUnion ContextAttributes;
-	unsigned int lengthInLogicalBlocks;
-	unsigned int startingLBA[2];
-} DATASET_MANAGEMENT_RANGE;
-
-typedef struct _DSM_RANGE{
-	DATASET_MANAGEMENT_RANGE dmRange[3000];
-	unsigned int tail;
-	unsigned int head;
-} DSM_RANGE, *P_DSM_RANGE;
-
 #pragma pack(pop)
 
 
@@ -862,6 +849,7 @@ typedef struct _NVME_STATUS
 } NVME_CONTEXT;
 
 unsigned int trim_flag;
+unsigned int trim_perf_flag;
 unsigned int trim_LSA;
 int nr_sum;
 unsigned int trimDmaCnt;
@@ -869,5 +857,4 @@ unsigned int trim_cnt;
 unsigned int gc_cnt;
 unsigned int wr_cnt;
 int cmd_by_trim;
-extern P_DSM_RANGE dsmRangePtr;
 #endif	//__NVME_H_
