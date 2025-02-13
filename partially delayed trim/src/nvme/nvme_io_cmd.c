@@ -148,7 +148,7 @@ void handle_asyncTrim(int forced)
 		if (dsmRangeHashTable->Range_Flag[j] == 1)
 		{
 			bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
-			xil_printf("Break hash index: %d\r\n", j);
+//			xil_printf("Break hash index: %d\r\n", j);
 			hashIndex = j;
 			break;
 		}
@@ -158,11 +158,11 @@ void handle_asyncTrim(int forced)
 	{
 		slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
 		nlb = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
-		xil_printf("handle_asyncTrim SelectiveGetFromDsmRangeHashList\r\n");
-		xil_printf("bufEntry: %d\r\n", bufEntry);
+//		xil_printf("handle_asyncTrim SelectiveGetFromDsmRangeHashList\r\n");
+//		xil_printf("bufEntry: %d\r\n", bufEntry);
 
 		nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
-		xil_printf("nextEntry1: %u\r\n", nextEntry);
+//		xil_printf("nextEntry1: %u\r\n", nextEntry);
 
 		SelectiveGetFromDsmRangeHashList(bufEntry);
 		blk0 = 1;

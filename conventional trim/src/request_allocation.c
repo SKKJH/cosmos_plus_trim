@@ -42,7 +42,7 @@
 // * v1.0.0
 //   - First draft
 //////////////////////////////////////////////////////////////////////////////////
-
+#include <stdlib.h>
 #include "xil_printf.h"
 #include <assert.h>
 #include "memory_map.h"
@@ -98,10 +98,6 @@ void InitReqPool()
 		reqPoolPtr->reqPool[reqSlotTag].nextBlockingReq = REQ_SLOT_TAG_NONE;
 		reqPoolPtr->reqPool[reqSlotTag].prevReq = reqSlotTag - 1;
 		reqPoolPtr->reqPool[reqSlotTag].nextReq = reqSlotTag + 1;
-		reqPoolPtr->reqPool[reqSlotTag].blk0 = 0;
-		reqPoolPtr->reqPool[reqSlotTag].blk1 = 0;
-		reqPoolPtr->reqPool[reqSlotTag].blk2 = 0;
-		reqPoolPtr->reqPool[reqSlotTag].blk3 = 0;
 	}
 
 	reqPoolPtr->reqPool[0].prevReq = REQ_SLOT_TAG_NONE;
@@ -326,11 +322,6 @@ void SelectiveGetFromBlockedByRowAddrDepReqQ(unsigned int reqSlotTag, unsigned i
 
 void PutToNvmeDmaReqQ(unsigned int reqSlotTag)
 {
-//	if(trim_flag == 1)
-//	{
-//		if (reqPoolPtr->reqPool[reqSlotTag].ioType == REQ_CODE_DSM)
-//			xil_printf("dsm command\r\n");
-//	}
 	if(nvmeDmaReqQ.tailReq != REQ_SLOT_TAG_NONE)
 	{
 		reqPoolPtr->reqPool[reqSlotTag].prevReq = nvmeDmaReqQ.tailReq;
@@ -348,6 +339,256 @@ void PutToNvmeDmaReqQ(unsigned int reqSlotTag)
 
 	reqPoolPtr->reqPool[reqSlotTag].reqQueueType = REQ_QUEUE_TYPE_NVME_DMA;
 	nvmeDmaReqQ.reqCnt++;
+}
+
+void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3)
+{
+	static XTime tStart, tEnd;
+	unsigned int lsa, bufEntry;
+	lsa = lba/4;
+//	xil_printf("LSA %d will be checked\r\n",lsa);
+//	if ((blk0 == 0)&&(blk1 == 0)&&(blk2 == 0)&&(blk3 == 0))
+//		xil_printf("LSA %d will be trimmed\r\n", lsa);
+
+//	XTime_GetTime(&tStart);
+	bufEntry = CheckDataBufHitbyLSA(lsa);
+	if (bufEntry != DATA_BUF_FAIL)
+	{
+//		buf_cnt++;
+//    	xil_printf("This Buffer will be cleaned: %d!!\r\n", bufEntry);
+        if (blk0 == 0)
+        {
+            dataBufMapPtr->dataBuf[bufEntry].blk0 = 0;
+        }
+        if (blk1 == 0)
+        {
+            dataBufMapPtr->dataBuf[bufEntry].blk1 = 0;
+        }
+        if (blk2 == 0)
+        {
+            dataBufMapPtr->dataBuf[bufEntry].blk2 = 0;
+        }
+        if (blk3 == 0)
+        {
+            dataBufMapPtr->dataBuf[bufEntry].blk3 = 0;
+        }
+        if ((dataBufMapPtr->dataBuf[bufEntry].blk0 == 0) &&
+            (dataBufMapPtr->dataBuf[bufEntry].blk1 == 0) &&
+            (dataBufMapPtr->dataBuf[bufEntry].blk2 == 0) &&
+            (dataBufMapPtr->dataBuf[bufEntry].blk3 == 0))
+        {
+//        	xil_printf("This Buffer cleaned: %d!!\r\n", bufEntry);
+            unsigned int prevBufEntry, nextBufEntry;
+            prevBufEntry = dataBufMapPtr->dataBuf[bufEntry].prevEntry;
+            nextBufEntry = dataBufMapPtr->dataBuf[bufEntry].nextEntry;
+
+            if (prevBufEntry != DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
+                dataBufMapPtr->dataBuf[prevBufEntry].nextEntry = nextBufEntry;
+                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = prevBufEntry;
+                nextBufEntry = DATA_BUF_NONE;
+                prevBufEntry = dataBufLruList.tailEntry;
+                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
+                dataBufLruList.tailEntry = bufEntry;
+            } else if (prevBufEntry != DATA_BUF_NONE && nextBufEntry == DATA_BUF_NONE) {
+                dataBufLruList.tailEntry = bufEntry;
+            } else if (prevBufEntry == DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
+                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = DATA_BUF_NONE;
+                dataBufLruList.headEntry = nextBufEntry;
+                prevBufEntry = dataBufLruList.tailEntry;
+                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
+                dataBufLruList.tailEntry = bufEntry;
+            } else {
+                prevBufEntry = DATA_BUF_NONE;
+                nextBufEntry = DATA_BUF_NONE;
+                dataBufLruList.headEntry = bufEntry;
+                dataBufLruList.tailEntry = bufEntry;
+            }
+            SelectiveGetFromDataBufHashList(bufEntry);
+            dataBufMapPtr->dataBuf[bufEntry].blockingReqTail = REQ_SLOT_TAG_NONE;
+            dataBufMapPtr->dataBuf[bufEntry].dirty = DATA_BUF_CLEAN;
+            dataBufMapPtr->dataBuf[bufEntry].reserved0 = 0;
+        }
+	}
+//	XTime_GetTime(&tEnd);
+//	xil_printf("Write Buffer Overhead\r\n");
+//	print_clock_cycles(tStart, tEnd);
+
+//	XTime_GetTime(&tStart);
+	unsigned int virtualSliceAddr = logicalSliceMapPtr->logicalSlice[lsa].virtualSliceAddr;
+	if (virtualSliceAddr != VSA_NONE) {
+//		mapping_cnt ++;
+//    	xil_printf("This LSA will be cleaned: %d!!\r\n", lsa);
+		if (blk0 == 0) {
+			logicalSliceMapPtr->logicalSlice[lsa].blk0 = 0;
+		}
+		if (blk1 == 0) {
+			logicalSliceMapPtr->logicalSlice[lsa].blk1 = 0;
+		}
+		if (blk2 == 0) {
+			logicalSliceMapPtr->logicalSlice[lsa].blk2 = 0;
+		}
+		if (blk3 == 0) {
+			logicalSliceMapPtr->logicalSlice[lsa].blk3 = 0;
+		}
+		if ((logicalSliceMapPtr->logicalSlice[lsa].blk0 == 0) &&
+			(logicalSliceMapPtr->logicalSlice[lsa].blk1 == 0) &&
+			(logicalSliceMapPtr->logicalSlice[lsa].blk2 == 0) &&
+	        (logicalSliceMapPtr->logicalSlice[lsa].blk3 == 0))
+		{
+//        	xil_printf("This LSA cleaned: %d!!\r\n", lsa);
+			InvalidateOldVsa(lsa);
+		}
+	}
+//	XTime_GetTime(&tEnd);
+//	xil_printf("Mapping Table Overhead\r\n");
+//	print_clock_cycles(tStart, tEnd);
+}
+
+void PerformDeallocation(unsigned int reqSlotTag)
+{
+//	static XTime tStart, tEnd, , first_nlb, first_start;
+	int nlb, slba, tempNlb, tempSlba, blk0, blk1, blk2, blk3;
+	unsigned int *devAddr = (unsigned int*)GenerateDataBufAddr(reqSlotTag);
+	unsigned int nr = reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nr;
+//	unsigned int LogicalAddr = reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr;
+//	xil_printf("LogicalAddr: %u\r\n", LogicalAddr);
+	for (int i=0; i<nr; i++)
+	{
+//		XTime_GetTime(&tStart);
+		blk0 = 1;
+		blk1 = 1;
+		blk2 = 1;
+		blk3 = 1;
+
+		nlb = *(devAddr + 1);
+//		first_nlb = nlb;
+		slba = *(devAddr + 2);
+//		first_start = slba;
+
+		if ( (nlb <= 0) || ((SLICES_PER_SSD * 4) < nlb) || ((SLICES_PER_SSD * 4) < slba) || (0 > slba))
+		{
+			xil_printf("INVALID TRIM REQ, REQUESTED NLB: %u\r\n", nlb);
+			break;
+		}
+
+		if ((slba % 4) == 0)
+		{
+			if(nlb == 1)
+				blk0 = 0;
+			else if (nlb == 2)
+			{
+				blk0 = 0;
+				blk1 = 0;
+			}
+			else if (nlb == 3)
+			{
+				blk0 = 0;
+				blk1 = 0;
+				blk2 = 0;
+			}
+			else
+			{
+				blk0 = 0;
+				blk1 = 0;
+				blk2 = 0;
+				blk3 = 0;
+			}
+		}
+		else if ((slba % 4) == 1)
+		{
+			if(nlb == 1)
+				blk1 = 0;
+			else if (nlb == 2)
+			{
+				blk1 = 0;
+				blk2 = 0;
+			}
+			else
+			{
+				blk1 = 0;
+				blk2 = 0;
+				blk3 = 0;
+			}
+		}
+		else if ((slba % 4) == 2)
+		{
+			if(nlb == 1)
+				blk2 = 0;
+			else
+			{
+				blk2 = 0;
+				blk3 = 0;
+			}
+		}
+		else
+		{
+			blk3 = 0;
+		}
+		TRIM(slba, blk0, blk1, blk2, blk3);
+		tempSlba = slba + (4 - (slba % 4));
+		tempNlb = nlb - (4 - (slba % 4));
+		nlb = tempNlb;
+		slba = tempSlba;
+
+		while(nlb > 4)
+		{
+			TRIM(slba, 0, 0, 0, 0);
+			slba = slba + 4;
+			nlb = nlb - 4;
+		}
+
+		blk0 = 1;
+		blk1 = 1;
+		blk2 = 1;
+		blk3 = 1;
+
+		if (nlb == 1)
+		{
+			blk0 = 0;
+		}
+		else if (nlb == 2)
+		{
+			blk0 = 0;
+			blk1 = 0;
+		}
+		else if (nlb == 3)
+		{
+			blk0 = 0;
+			blk1 = 0;
+			blk2 = 0;
+		}
+		else
+		{
+			blk0 = 0;
+			blk1 = 0;
+			blk2 = 0;
+			blk3 = 0;
+		}
+		TRIM(slba, blk0, blk1, blk2, blk3);
+		devAddr += 4;
+
+//		XTime_GetTime(&tEnd);
+//		print_clock_cycles(tStart, tEnd);
+//		xil_printf("REQUESTED TRIM START LBA: %u\r\n", first_start);
+//		xil_printf("REQUESTED TRIM NLB: %u\r\n", first_nlb);
+//		xil_printf("INVALIDATE BUFFER: %d\r\n", buf_cnt);
+//		xil_printf("INVALIDATE MAPPING: %d\r\n", mapping_cnt);
+	}
+	trim_flag = 0;
+}
+
+void ForcedTRIM()
+{
+	int TOTAL_BLOCKS = 3145728;
+
+	int nlb = 32768*8;
+	int slba = rand() % (TOTAL_BLOCKS - nlb);
+	while(nlb > 4)
+	{
+		TRIM(slba, 0, 0, 0, 0);
+		slba = slba + 4;
+		nlb = nlb - 4;
+	}
 }
 
 void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
@@ -381,21 +622,8 @@ void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
 	reqPoolPtr->reqPool[reqSlotTag].reqQueueType = REQ_QUEUE_TYPE_NONE;
 	nvmeDmaReqQ.reqCnt--;
 
-	if (trim_flag == 1)
-	{
-		if (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM)
-		{	//if DMA for trim is done, do trim
-			trimDmaCnt--;
-			PerformDeallocation(reqSlotTag);
-		}
-//		else if ((reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_WRITE) && (reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag == 1))
-//		{
-//			int lpn = reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr;
-//			long long unsigned mask = ~(1ULL << lpn%64);
-//			asyncTrimBitMapPtr->trimBitMap[lpn/64] &= mask;
-
-//		}
-	}
+	if ((trim_flag == 1) && (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM))
+		PerformDeallocation(reqSlotTag);
 
 	PutToFreeReqQ(reqSlotTag);
 	ReleaseBlockedByBufDepReq(reqSlotTag);

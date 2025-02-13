@@ -47,7 +47,6 @@
 
 #include <assert.h>
 #include "memory_map.h"
-#include "nvme/nvme_io_cmd.h"
 #include "xil_printf.h"
 
 P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
@@ -556,7 +555,6 @@ void EraseTotalBlockSpace()
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_TOTAL;
-			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalCh = Vdie2PchTranslation(dieNo);
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalWay = Vdie2PwayTranslation(dieNo);
@@ -590,7 +588,6 @@ void EraseUserBlockSpace()
 				reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 				reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 				reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
-				reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 
 				reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, 0);
 
@@ -671,6 +668,7 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk1 = blk1;
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk2 = blk2;
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk3 = blk3;
+//		xil_printf("Flushed LogicalSliceAddr: %u\r\n", logicalSliceAddr);
 
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk0 = blk0;
@@ -688,6 +686,7 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 unsigned int FindFreeVirtualSlice()
 {
 	unsigned int currentBlock, virtualSliceAddr, dieNo;
+	static XTime tStart, tEnd;
 
 	dieNo = sliceAllocationTargetDie;
 	currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
@@ -700,12 +699,18 @@ unsigned int FindFreeVirtualSlice()
 			virtualDieMapPtr->die[dieNo].currentBlock = currentBlock;
 		else
 		{
-			if(trim_flag != 0)
-				handle_asyncTrim(0);
-
+			XTime_GetTime(&tStart);
 			GarbageCollection(dieNo);
-			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
+			XTime_GetTime(&tEnd);
+			ov_cnt += (tEnd - tStart);
+			if (gc_trim_f == 1)
+			{
+				gc_trim_f = 0;
+				xil_printf("GC TRIM CALLED\r\n");
+			}
+			print_clock_cycles(tStart, tEnd);
 
+			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
 			if(virtualBlockMapPtr->block[dieNo][currentBlock].currentPage == USER_PAGES_PER_BLOCK)
 			{
 				currentBlock = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
@@ -800,10 +805,6 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr)
 		SelectiveGetFromGcVictimList(dieNo, blockNo);
 		virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = VSA_NONE;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk0 = 0;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk1 = 0;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk2 = 0;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk3 = 0;
 
 		PutToGcVictimList(dieNo, blockNo, virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt);
 	}
@@ -823,7 +824,6 @@ void EraseBlock(unsigned int dieNo, unsigned int blockNo)
 	reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 	reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_CHECK;
 	reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
-	reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 	reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, 0);
 	reqPoolPtr->reqPool[reqSlotTag].nandInfo.programmedPageCnt = virtualBlockMapPtr->block[dieNo][blockNo].currentPage;
 
@@ -841,10 +841,6 @@ void EraseBlock(unsigned int dieNo, unsigned int blockNo)
 	{
 		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, pageNo);
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = LSA_NONE;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk0 = 0;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk1 = 0;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk2 = 0;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk3 = 0;
 	}
 }
 

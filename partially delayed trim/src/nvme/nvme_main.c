@@ -207,8 +207,8 @@ void nvme_main()
 		if(trim_perf_flag != 0)
 		{
 			time_cnt++;
-//			if (time_cnt == 20000000)
-			if (time_cnt > 0)
+//			if (time_cnt > 0)
+			if (time_cnt >= 20000000)
 			{
 				time_cnt = 0;
 				handle_asyncTrim(0);

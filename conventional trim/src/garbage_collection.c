@@ -70,10 +70,29 @@ void InitGcVictimMap()
 
 void GarbageCollection(unsigned int dieNo)
 {
-	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, blk0, blk1, blk2, blk3;
+	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, og_valid_page, new_valid_page;
+	gc_cnt += 1;
+
+	victimBlockNo = GetFromGcVictimListNum(dieNo);
+	dieNoForGcCopy = dieNo;
+
+	og_valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
+	gc_copy += og_valid_page;
+
+	if((gc_trim_cnt < 2))
+	{
+		if (gc_cnt >= start_point)
+		{
+			ForcedTRIM();
+			gc_trim_f = 1;
+			gc_trim_cnt++;
+			start_point += thres;
+		}
+	}
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
-	dieNoForGcCopy = dieNo;
+	new_valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
+	rd_gc_copy += new_valid_page;
 
 	if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt != SLICES_PER_BLOCK)
 	{
@@ -85,11 +104,6 @@ void GarbageCollection(unsigned int dieNo)
 			if(logicalSliceAddr != LSA_NONE)
 				if(logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr ==  virtualSliceAddr) //valid data
 				{
-					blk0 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk0;
-					blk1 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk1;
-					blk2 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk2;
-					blk3 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk3;
-
 					//read
 					reqSlotTag = GetFromFreeReqQ();
 
@@ -109,7 +123,6 @@ void GarbageCollection(unsigned int dieNo)
 					SelectLowLevelReqQ(reqSlotTag);
 
 					//write
-					gc_cnt++;
 					reqSlotTag = GetFromFreeReqQ();
 
 					reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_NAND;
@@ -127,10 +140,6 @@ void GarbageCollection(unsigned int dieNo)
 
 					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
 					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk0 = blk0;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk1 = blk1;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk2 = blk2;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk3 = blk3;
 
 					SelectLowLevelReqQ(reqSlotTag);
 				}
@@ -138,8 +147,71 @@ void GarbageCollection(unsigned int dieNo)
 	}
 
 	EraseBlock(dieNo, victimBlockNo);
+	SyncAllLowLevelReqDone();
 }
 
+//void T_GC(unsigned int dieNo)
+//{
+//	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag;
+//
+//	victimBlockNo = GetFromGcVictimList(dieNo);
+//	dieNoForGcCopy = dieNo;
+//
+//	if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt != SLICES_PER_BLOCK)
+//	{
+//		for(pageNo=0 ; pageNo<USER_PAGES_PER_BLOCK ; pageNo++)
+//		{
+//			virtualSliceAddr = Vorg2VsaTranslation(dieNo, victimBlockNo, pageNo);
+//			logicalSliceAddr = virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr;
+//
+//			if(logicalSliceAddr != LSA_NONE)
+//				if(logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr ==  virtualSliceAddr) //valid data
+//				{
+//					//read
+//					reqSlotTag = GetFromFreeReqQ();
+//
+//					reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_NAND;
+//					reqPoolPtr->reqPool[reqSlotTag].reqCode = REQ_CODE_READ;
+//					reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = logicalSliceAddr;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_TEMP_ENTRY;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandAddr = REQ_OPT_NAND_ADDR_VSA;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEcc = REQ_OPT_NAND_ECC_ON;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEccWarning = REQ_OPT_NAND_ECC_WARNING_OFF;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_CHECK;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
+//					reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry = AllocateTempDataBuf(dieNo);
+//					UpdateTempDataBufEntryInfoBlockingReq(reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry, reqSlotTag);
+//					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = virtualSliceAddr;
+//
+//					SelectLowLevelReqQ(reqSlotTag);
+//
+//					//write
+//					reqSlotTag = GetFromFreeReqQ();
+//
+//					reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_NAND;
+//					reqPoolPtr->reqPool[reqSlotTag].reqCode = REQ_CODE_WRITE;
+//					reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = logicalSliceAddr;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_TEMP_ENTRY;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandAddr = REQ_OPT_NAND_ADDR_VSA;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEcc = REQ_OPT_NAND_ECC_ON;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEccWarning = REQ_OPT_NAND_ECC_WARNING_OFF;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_CHECK;
+//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
+//					reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry = AllocateTempDataBuf(dieNo);
+//					UpdateTempDataBufEntryInfoBlockingReq(reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry, reqSlotTag);
+//					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = FindFreeVirtualSliceForGc(dieNoForGcCopy, victimBlockNo);
+//
+//					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
+//					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
+//
+//					SelectLowLevelReqQ(reqSlotTag);
+//				}
+//		}
+//	}
+//
+//	EraseBlock(dieNo, victimBlockNo);
+//	SyncAllLowLevelReqDone();
+//}
 
 void PutToGcVictimList(unsigned int dieNo, unsigned int blockNo, unsigned int invalidSliceCnt)
 {
@@ -190,6 +262,23 @@ unsigned int GetFromGcVictimList(unsigned int dieNo)
 	return BLOCK_FAIL;
 }
 
+unsigned int GetFromGcVictimListNum(unsigned int dieNo)
+{
+	unsigned int evictedBlockNo;
+	int invalidSliceCnt;
+
+	for(invalidSliceCnt = SLICES_PER_BLOCK; invalidSliceCnt > 0 ; invalidSliceCnt--)
+	{
+		if(gcVictimMapPtr->gcVictimList[dieNo][invalidSliceCnt].headBlock != BLOCK_NONE)
+		{
+			evictedBlockNo = gcVictimMapPtr->gcVictimList[dieNo][invalidSliceCnt].headBlock;
+			return evictedBlockNo;
+		}
+	}
+
+	assert(!"[WARNING] There are no free blocks. Abort terminate this ssd. [WARNING]");
+	return BLOCK_FAIL;
+}
 
 void SelectiveGetFromGcVictimList(unsigned int dieNo, unsigned int blockNo)
 {

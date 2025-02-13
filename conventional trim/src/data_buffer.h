@@ -49,9 +49,7 @@
 
 #include "ftl_config.h"
 
-#define BITMAP_SIZE 									(USER_PAGES_PER_SSD/64)
-
-#define AVAILABLE_DATA_BUFFER_ENTRY_COUNT				(16 * USER_DIES)
+#define AVAILABLE_DATA_BUFFER_ENTRY_COUNT				(128 * USER_DIES)
 #define AVAILABLE_TEMPORARY_DATA_BUFFER_ENTRY_COUNT		(USER_DIES)
 
 #define DATA_BUF_NONE	0xffff
@@ -61,23 +59,19 @@
 
 #define FindDataBufHashTableEntry(logicalSliceAddr) ((logicalSliceAddr) % AVAILABLE_DATA_BUFFER_ENTRY_COUNT)
 
-typedef struct _ASYNC_TRIM_BIT_MAP {
-//	unsigned long long trimBitMap[BITMAP_SIZE];
-	unsigned long long writeBitMap[BITMAP_SIZE];
-} ASYNC_TRIM_BIT_MAP, *P_ASYNC_TRIM_BIT_MAP;
-
 typedef struct _DATA_BUF_ENTRY {
-	unsigned int logicalSliceAddr : 28;
-	unsigned int blk0 : 1;
-	unsigned int blk1 : 1;
-	unsigned int blk2 : 1;
-	unsigned int blk3 : 1;
+	unsigned int logicalSliceAddr;
 	unsigned int prevEntry : 16;
 	unsigned int nextEntry : 16;
 	unsigned int blockingReqTail : 16;
 	unsigned int hashPrevEntry : 16;
 	unsigned int hashNextEntry : 16;
 	unsigned int dirty : 1;
+	unsigned int blk0 : 8;
+	unsigned int blk1 : 8;
+	unsigned int blk2 : 8;
+	unsigned int blk3 : 8;
+
 	unsigned int reserved0 : 15;
 } DATA_BUF_ENTRY, *P_DATA_BUF_ENTRY;
 
@@ -112,7 +106,6 @@ typedef struct _TEMPORARY_DATA_BUF_MAP{
 
 void InitDataBuf();
 unsigned int CheckDataBufHit(unsigned int reqSlotTag);
-unsigned int CheckDataBufHitbyLSA(unsigned int logicalSliceAddr);
 unsigned int AllocateDataBuf();
 void UpdateDataBufEntryInfoBlockingReq(unsigned int bufEntry, unsigned int reqSlotTag);
 
@@ -122,10 +115,11 @@ void UpdateTempDataBufEntryInfoBlockingReq(unsigned int bufEntry, unsigned int r
 void PutToDataBufHashList(unsigned int bufEntry);
 void SelectiveGetFromDataBufHashList(unsigned int bufEntry);
 
+unsigned int CheckDataBufHitbyLSA(unsigned int logicalSliceAddr);
+
 extern P_DATA_BUF_MAP dataBufMapPtr;
 extern DATA_BUF_LRU_LIST dataBufLruList;
 extern P_DATA_BUF_HASH_TABLE dataBufHashTable;
 extern P_TEMPORARY_DATA_BUF_MAP tempDataBufMapPtr;
-extern P_ASYNC_TRIM_BIT_MAP asyncTrimBitMapPtr;
 
 #endif /* DATA_BUFFER_H_ */

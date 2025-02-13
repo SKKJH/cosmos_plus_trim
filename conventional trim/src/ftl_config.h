@@ -50,6 +50,7 @@
 #include "nsc_driver.h"
 #include "xparameters.h"
 #include "nvme/nvme.h"
+#include "xtime_l.h"
 
 //checks NSC connection, initializes base address
 #ifdef	XPAR___TIGER4NSC_7_BASEADDR
@@ -181,18 +182,11 @@
 #define	SLC_MODE				1
 #define	MLC_MODE				2
 
-////************************************************************************
-//#define	BITS_PER_FLASH_CELL		SLC_MODE	//user configurable factor
-//#define	USER_BLOCKS_PER_LUN		4096		//user configurable factor
-//#define	USER_CHANNELS			(NUMBER_OF_CONNECTED_CHANNEL)		//user configurable factor
-//#define	USER_WAYS				8			//user configurable factor
-////************************************************************************
-
 //************************************************************************
 #define	BITS_PER_FLASH_CELL		SLC_MODE	//user configurable factor
-#define	USER_BLOCKS_PER_LUN		1024		//user configurable factor
-#define	USER_CHANNELS			2		//user configurable factor
-#define	USER_WAYS				2			//user configurable factor
+#define	USER_BLOCKS_PER_LUN		512		//user configurable factor
+#define	USER_CHANNELS			(2)		//user configurable factor
+#define	USER_WAYS				4			//user configurable factor
 //************************************************************************
 
 #define	BYTES_PER_DATA_REGION_OF_SLICE		16384		//slice is a mapping unit of FTL
@@ -201,15 +195,13 @@
 #define SLICES_PER_PAGE				(BYTES_PER_DATA_REGION_OF_PAGE / BYTES_PER_DATA_REGION_OF_SLICE)	//a slice directs a page, full page mapping
 #define NVME_BLOCKS_PER_SLICE		(BYTES_PER_DATA_REGION_OF_SLICE / BYTES_PER_NVME_BLOCK)
 
-#define	USER_DIES					(USER_CHANNELS * USER_WAYS)
+#define	USER_DIES					(USER_CHANNELS * USER_WAYS) //8
 
-#define	USER_PAGES_PER_BLOCK		(PAGES_PER_SLC_BLOCK * BITS_PER_FLASH_CELL)	//128*1
-#define	USER_PAGES_PER_LUN			(USER_PAGES_PER_BLOCK * USER_BLOCKS_PER_LUN)//128*1024
-#define	USER_PAGES_PER_DIE			(USER_PAGES_PER_LUN * LUNS_PER_DIE)			//128*1024*2
-#define	USER_PAGES_PER_CHANNEL		(USER_PAGES_PER_DIE * USER_WAYS)			//128*1024*2*2
-#define	USER_PAGES_PER_SSD			(USER_PAGES_PER_CHANNEL * USER_CHANNELS)	//128*1024*2*2*2
-																				//1 page = 4KB*4
-																				//total 16GB
+#define	USER_PAGES_PER_BLOCK		(PAGES_PER_SLC_BLOCK * BITS_PER_FLASH_CELL)
+#define	USER_PAGES_PER_LUN			(USER_PAGES_PER_BLOCK * USER_BLOCKS_PER_LUN)
+#define	USER_PAGES_PER_DIE			(USER_PAGES_PER_LUN * LUNS_PER_DIE)
+#define	USER_PAGES_PER_CHANNEL		(USER_PAGES_PER_DIE * USER_WAYS)
+#define	USER_PAGES_PER_SSD			(USER_PAGES_PER_CHANNEL * USER_CHANNELS)
 
 #define	SLICES_PER_BLOCK			(USER_PAGES_PER_BLOCK * SLICES_PER_PAGE)
 #define	SLICES_PER_LUN				(USER_PAGES_PER_LUN * SLICES_PER_PAGE)
@@ -232,6 +224,7 @@ void InitFTL();
 void InitChCtlReg();
 void InitNandArray();
 void CheckConfigRestriction();
+void print_clock_cycles(XTime tStart, XTime tEnd);
 
 extern unsigned int storageCapacity_L;
 extern V2FMCRegisters* chCtlReg[USER_CHANNELS];

@@ -48,6 +48,9 @@
 //   - First draft
 //////////////////////////////////////////////////////////////////////////////////
 
+#include <stdint.h>
+#include <stddef.h>
+
 #ifndef __NVME_H_
 #define __NVME_H_
 
@@ -85,6 +88,7 @@
 #define IO_NVM_READ											0x02
 #define IO_NVM_WRITE_UNCORRECTABLE							0x04
 #define IO_NVM_COMPARE										0x05
+#define IO_NVM_WRITE_ZEROS									0x08
 #define IO_NVM_DATASET_MANAGEMENT							0x09
 
 /*Status Code Type */
@@ -799,24 +803,12 @@ typedef struct _DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES
 	unsigned int CommandAccessSize			:8;
 } DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES;
 
-typedef union _DSMRangeUnion
-{
-	unsigned int value;
-	DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES contextAttributes;
-} DSMRangeUnion;
-
 typedef struct _DATASET_MANAGEMENT_RANGE
 {
-	DSMRangeUnion ContextAttributes;
+    DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES ContextAttributes;
 	unsigned int lengthInLogicalBlocks;
 	unsigned int startingLBA[2];
 } DATASET_MANAGEMENT_RANGE;
-
-typedef struct _DSM_RANGE{
-	DATASET_MANAGEMENT_RANGE dmRange[3000];
-	unsigned int tail;
-	unsigned int head;
-} DSM_RANGE, *P_DSM_RANGE;
 
 #pragma pack(pop)
 
@@ -862,11 +854,13 @@ typedef struct _NVME_STATUS
 
 unsigned int trim_flag;
 unsigned int trim_LSA;
-int nr_sum;
-unsigned int trimDmaCnt;
-unsigned int trim_cnt;
+unsigned int gc_copy;
+unsigned int thres;
+int start_point;
+unsigned int huge_gc;
+unsigned int rd_gc_copy;
 unsigned int gc_cnt;
-unsigned int wr_cnt;
-int cmd_by_trim;
-extern P_DSM_RANGE dsmRangePtr;
+unsigned int gc_trim_f;
+unsigned int gc_trim_cnt;
+uint64_t ov_cnt;
 #endif	//__NVME_H_

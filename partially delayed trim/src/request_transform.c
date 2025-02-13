@@ -107,7 +107,7 @@ void ReqTransNvmeToSliceForDSM(unsigned int cmdSlotTag, unsigned int nr)
 
 void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigned int nlb, unsigned int cmdCode)
 {
-	unsigned int dma_proc, slsa, elsa, start_index, end_index, reqSlotTag, requestedNvmeBlock, tempNumOfNvmeBlock, transCounter, tempLsa, loop, nvmeBlockOffset, nvmeDmaStartIndex, reqCode;
+	unsigned int slsa, elsa, start_index, end_index, reqSlotTag, requestedNvmeBlock, tempNumOfNvmeBlock, transCounter, tempLsa, loop, nvmeBlockOffset, nvmeDmaStartIndex, reqCode;
 	unsigned long long start_mask, end_mask;
 
 	requestedNvmeBlock = nlb + 1;
@@ -195,7 +195,7 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = nvmeDmaStartIndex;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = nvmeBlockOffset;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = tempNumOfNvmeBlock;
-	reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = dma_proc;
+//	reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = dma_proc;
 
 	if (nvmeBlockOffset == 0)
 	{
@@ -278,7 +278,7 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 		reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = nvmeDmaStartIndex;
 		reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = nvmeBlockOffset;
 		reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = tempNumOfNvmeBlock;
-		reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = dma_proc;
+//		reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = dma_proc;
 		reqPoolPtr->reqPool[reqSlotTag].blk0 = 1;
 		reqPoolPtr->reqPool[reqSlotTag].blk1 = 1;
 		reqPoolPtr->reqPool[reqSlotTag].blk2 = 1;
@@ -306,7 +306,7 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = nvmeDmaStartIndex;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = nvmeBlockOffset;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = tempNumOfNvmeBlock;
-	reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = dma_proc;
+//	reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = dma_proc;
 
 	if (tempNumOfNvmeBlock == 1)
 	{
@@ -917,18 +917,18 @@ void PerformDeallocation(unsigned int reqSlotTag)
         // Validation check for boundaries
         if (((SLICES_PER_SSD * 4) < tempval) || ((SLICES_PER_SSD * 4) < tempval2))
         {
-        	xil_printf("deallocation validation error\r\n");
+//        	xil_printf("deallocation validation error\r\n");
             break;
         }
 
         nr_sum++;
 
         newEntry = AllocateDSMBuf();
-        xil_printf("newEntry: %u\r\n", newEntry);
+//        xil_printf("newEntry: %u\r\n", newEntry);
         dsmRangePtr->dsmRange[newEntry].lengthInLogicalBlocks = tempval;
         dsmRangePtr->dsmRange[newEntry].startingLBA[0] = tempval2;
         PutToDsmRangeHashList(newEntry);
-        xil_printf("length: %u\r\n", dsmRangePtr->dsmRange[newEntry].lengthInLogicalBlocks);
+//        xil_printf("length: %u\r\n", dsmRangePtr->dsmRange[newEntry].lengthInLogicalBlocks);
 //        xil_printf("start lba: %u\r\n", dsmRangePtr->dsmRange[newEntry].startingLBA[0]);
 
         devAddr += 4;

@@ -120,7 +120,7 @@ void InitNandArray()
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_TOTAL;
-			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
+//			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalCh = chNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalWay = wayNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalBlock = 0;	//dummy
@@ -137,7 +137,7 @@ void InitNandArray()
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_TOTAL;
-			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
+//			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalCh = chNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalWay = wayNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalBlock = 0;	//dummy

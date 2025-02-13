@@ -120,7 +120,6 @@ void InitNandArray()
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_TOTAL;
-			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalCh = chNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalWay = wayNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalBlock = 0;	//dummy
@@ -137,7 +136,6 @@ void InitNandArray()
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_TOTAL;
-			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalCh = chNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalWay = wayNo;
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalBlock = 0;	//dummy
@@ -171,3 +169,10 @@ void CheckConfigRestriction()
 	if(FTL_MANAGEMENT_END_ADDR > DRAM_END_ADDR)
 		assert(!"[WARNING] Configuration Error: Metadata of FTL is too large to be allocated to DRAM [WARNING]");
 }
+
+void print_clock_cycles(XTime tStart, XTime tEnd){
+	u32 diff_high   = (u32)((tEnd - tStart) >> 32);
+	u32 diff_low    = (u32)(tEnd - tStart);
+	xil_printf("GC Overhead: High 0x%08X Low 0x%08X\r\n", diff_high, diff_low);
+}
+

@@ -59,31 +59,30 @@
 #include "xil_printf.h"
 #include "debug.h"
 #include "io_access.h"
-#include "xtime_l.h"
+
 #include "nvme.h"
 #include "host_lld.h"
 #include "nvme_main.h"
 #include "nvme_admin_cmd.h"
 #include "nvme_io_cmd.h"
-
 #include "../memory_map.h"
 
 volatile NVME_CONTEXT g_nvmeTask;
 
 void nvme_main()
 {
-	static XTime tStart, tEnd;
-	int time_cnt = 0;
+	ov_cnt = 0;
 	unsigned int exeLlr;
 	unsigned int rstCnt = 0;
 	trim_flag = 0;
-	trimDmaCnt = 0;
-	trim_cnt = 0;
 	gc_cnt = 0;
-	wr_cnt = 0;
-	nr_sum = 0;
-	cmd_by_trim = 0;
-
+	gc_trim_f = 0;
+	gc_trim_cnt = 0;
+	huge_gc = 0;
+	thres = 2000;
+	start_point = 100;
+	gc_copy = 0;
+	rd_gc_copy = 0;
 	xil_printf("!!! Wait until FTL reset complete !!! \r\n");
 
 	InitFTL();
@@ -94,6 +93,7 @@ void nvme_main()
 	while(1)
 	{
 		exeLlr = 1;
+
 
 		if(g_nvmeTask.status == NVME_TASK_WAIT_CC_EN)
 		{
@@ -113,16 +113,13 @@ void nvme_main()
 			unsigned int cmdValid;
 			cmdValid = get_nvme_cmd(&nvmeCmd.qID, &nvmeCmd.cmdSlotTag, &nvmeCmd.cmdSeqNum, nvmeCmd.cmdDword);
 			if(cmdValid == 1)
-			{
-				rstCnt = 0;
+			{	rstCnt = 0;
 				if(nvmeCmd.qID == 0)
 				{
 					handle_nvme_admin_cmd(&nvmeCmd);
 				}
 				else
 				{
-//					XTime_GetTime(&tStart);
-					time_cnt = 0;
 					handle_nvme_io_cmd(&nvmeCmd);
 					ReqTransSliceToLowLevel();
 					exeLlr=0;
@@ -131,6 +128,14 @@ void nvme_main()
 		}
 		else if(g_nvmeTask.status == NVME_TASK_SHUTDOWN)
 		{
+
+			u32 diff_high = (u32)(ov_cnt >> 32);
+			u32 diff_low    = (u32)(ov_cnt);
+			xil_printf("Total Overhead: High 0x%08X Low 0x%08X\r\n", diff_high, diff_low);
+			xil_printf("Total GC Copy Cnt: %u\r\n", gc_copy);
+			xil_printf("Total Reduce GC Copy Cnt: %u\r\n", rd_gc_copy);
+			xil_printf("Total GC Called: %u\r\n", gc_cnt);
+
 			NVME_STATUS_REG nvmeReg;
 			nvmeReg.dword = IO_READ32(NVME_STATUS_REG_ADDR);
 			if(nvmeReg.ccShn != 0)
@@ -151,9 +156,7 @@ void nvme_main()
 
 				//flush grown bad block info
 				UpdateBadBlockTableForGrownBadBlock(RESERVED_DATA_BUFFER_BASE_ADDR);
-
 				xil_printf("\r\nNVMe shutdown!!!\r\n");
-				xil_printf("wr_cnt: %d, gc_cnt: %d, trim_cnt: %d\r\n", wr_cnt, gc_cnt, trim_cnt);
 			}
 		}
 		else if(g_nvmeTask.status == NVME_TASK_WAIT_RESET)
@@ -198,20 +201,9 @@ void nvme_main()
 
 		if(exeLlr && ((nvmeDmaReqQ.headReq != REQ_SLOT_TAG_NONE) || notCompletedNandReqCnt || blockedReqCnt))
 		{
-			time_cnt = 0;
 			CheckDoneNvmeDmaReq();
 			SchedulingNandReq();
 		}
-
-//		if(trim_flag != 0)
-//		{
-//			time_cnt++;
-//			if (time_cnt == 20000000)
-//			{
-//				time_cnt = 0;
-//				handle_asyncTrim(0);
-//			}
-//		}
 	}
 }
 

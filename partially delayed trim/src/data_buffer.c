@@ -276,7 +276,7 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 	unsigned int hashEntry, newLength, currentEntry, prevEntry;
 
 	newLength = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
-	xil_printf("PutToDsmRangeHashList Length: %u\r\n", newLength);
+//	xil_printf("PutToDsmRangeHashList Length: %u\r\n", newLength);
 
 	if (newLength == 0)
 		return;
@@ -293,17 +293,17 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 			break;
 		prevEntry = currentEntry;
 		currentEntry = dsmRangePtr->dsmRange[currentEntry].hashNextEntry;
-		xil_printf("nextEntry2: %u\r\n", currentEntry);
+//		xil_printf("nextEntry2: %u\r\n", currentEntry);
 	}
 
 	dsmRangePtr->dsmRange[bufEntry].hashPrevEntry = DATA_BUF_NONE;
 	dsmRangePtr->dsmRange[bufEntry].hashNextEntry = DATA_BUF_NONE;
-	xil_printf("nextEntry3: %u\r\n", dsmRangePtr->dsmRange[bufEntry].hashNextEntry);
+//	xil_printf("nextEntry3: %u\r\n", dsmRangePtr->dsmRange[bufEntry].hashNextEntry);
 
 	if (prevEntry == DATA_BUF_NONE)
 	{
 		dsmRangePtr->dsmRange[bufEntry].hashNextEntry = currentEntry;
-		xil_printf("nextEntry4: %u\r\n", dsmRangePtr->dsmRange[bufEntry].hashNextEntry);
+//		xil_printf("nextEntry4: %u\r\n", dsmRangePtr->dsmRange[bufEntry].hashNextEntry);
 		dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry = bufEntry;
 
 		if (currentEntry != DATA_BUF_NONE)
@@ -315,7 +315,7 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 	{
 		dsmRangePtr->dsmRange[bufEntry].hashPrevEntry = prevEntry;
 		dsmRangePtr->dsmRange[bufEntry].hashNextEntry = currentEntry;
-		xil_printf("nextEntry5: %u\r\n", dsmRangePtr->dsmRange[bufEntry].hashNextEntry);
+//		xil_printf("nextEntry5: %u\r\n", dsmRangePtr->dsmRange[bufEntry].hashNextEntry);
 		dsmRangePtr->dsmRange[prevEntry].hashNextEntry = bufEntry;
 
 		if (currentEntry != DATA_BUF_NONE)
@@ -327,14 +327,14 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 
 void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry)
 {
-	xil_printf("bufEntry: %d\r\n", bufEntry);
+//	xil_printf("bufEntry: %d\r\n", bufEntry);
 	if(dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks != 0)
 	{
 		unsigned int prevBufEntry, nextBufEntry, hashEntry;
 
 		prevBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashPrevEntry;
 		nextBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
-		xil_printf("nextEntry65: %u\r\n", nextBufEntry);
+//		xil_printf("nextEntry65: %u\r\n", nextBufEntry);
 
 		hashEntry = FindDsmRangeHashTableEntry(dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks);
 
@@ -362,7 +362,7 @@ void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry)
 
 		dsmRangePtr->dsmRange[bufEntry].hashPrevEntry = DATA_BUF_NONE;
 		dsmRangePtr->dsmRange[bufEntry].hashNextEntry = DATA_BUF_NONE;
-		xil_printf("nextEntry7: %u\r\n", nextBufEntry);
+//		xil_printf("nextEntry7: %u\r\n", nextBufEntry);
 	}
 	else
 		assert(!"[WARNING] SelectiveGetFromDsmRangeHashList [WARNING]");
@@ -409,7 +409,7 @@ unsigned int SmallestDSMBuftoLRUList()
 					tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
 
 			}
-			xil_printf("SmallestDSMBuftoLRUList SelectiveGetFromDsmRangeHashList\r\n");
+//			xil_printf("SmallestDSMBuftoLRUList SelectiveGetFromDsmRangeHashList\r\n");
 			SelectiveGetFromDsmRangeHashList(smallestEntry);
 			return smallestEntry;
 		}
