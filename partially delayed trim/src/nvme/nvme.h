@@ -806,6 +806,13 @@ typedef union _DSMRangeUnion
 	DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES contextAttributes;
 } DSMRangeUnion;
 
+//typedef struct _DATASET_MANAGEMENT_RANGE
+//{
+//    DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES ContextAttributes;
+//	unsigned int lengthInLogicalBlocks;
+//	unsigned int startingLBA[2];
+//} DATASET_MANAGEMENT_RANGE;
+
 #pragma pack(pop)
 
 
@@ -848,13 +855,12 @@ typedef struct _NVME_STATUS
 	NVME_IO_CQ_STATUS ioCqInfo[MAX_NUM_OF_IO_CQ];
 } NVME_CONTEXT;
 
-unsigned int trim_flag;
-unsigned int trim_perf_flag;
-unsigned int trim_LSA;
 int nr_sum;
-unsigned int trimDmaCnt;
-unsigned int trim_cnt;
-unsigned int gc_cnt;
-unsigned int wr_cnt;
+unsigned int trim_flag;
+unsigned int do_trim_flag;
+unsigned int trim_LSA;
+unsigned int print_cnt;
+unsigned int real_copy_cnt;
 int cmd_by_trim;
+
 #endif	//__NVME_H_

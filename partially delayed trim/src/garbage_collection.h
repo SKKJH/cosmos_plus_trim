@@ -63,6 +63,7 @@ void GarbageCollection(unsigned int dieNo);
 
 void PutToGcVictimList(unsigned int dieNo, unsigned int blockNo, unsigned int invalidSliceCnt);
 unsigned int GetFromGcVictimList(unsigned int dieNo);
+unsigned int GetFromGcVictimListNum(unsigned int dieNo);
 void SelectiveGetFromGcVictimList(unsigned int dieNo, unsigned int blockNo);
 
 extern P_GC_VICTIM_MAP gcVictimMapPtr;

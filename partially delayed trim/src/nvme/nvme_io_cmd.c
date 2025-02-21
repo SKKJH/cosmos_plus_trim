@@ -57,10 +57,33 @@
 #include "nvme.h"
 #include "host_lld.h"
 #include "nvme_io_cmd.h"
-#include "../data_buffer.h"
 
+#include "../data_buffer.h"
 #include "../ftl_config.h"
 #include "../request_transform.h"
+
+void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
+{
+	unsigned int ad;
+	IO_DATASET_MANAGEMENT_COMMAND_DW10 dsmInfo10;
+	IO_DATASET_MANAGEMENT_COMMAND_DW11 dsmInfo11;
+
+	dsmInfo10.dword = nvmeIOCmd->dword10;
+	dsmInfo11.dword = nvmeIOCmd->dword11;
+	unsigned int nr = dsmInfo10.NR + 1;
+	xil_printf("NR: %u\r\n", dsmInfo10.NR);
+
+	ad = dsmInfo11.AD;
+
+	if (ad==1)
+	{
+		ReqTransNvmeToSliceForDSM(cmdSlotTag, nr);
+	}
+	else
+	{
+		xil_printf("No Discard\r\n");
+	}
+}
 
 void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 {
@@ -85,6 +108,7 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 
 	ReqTransNvmeToSlice(cmdSlotTag, startLba[0], nlb, IO_NVM_READ);
 }
+
 
 void handle_nvme_io_write(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 {
@@ -113,30 +137,68 @@ void handle_nvme_io_write(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 	ReqTransNvmeToSlice(cmdSlotTag, startLba[0], nlb, IO_NVM_WRITE);
 }
 
-void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
+void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 {
-	unsigned int ad;
-	IO_DATASET_MANAGEMENT_COMMAND_DW10 dsmInfo10;
-	IO_DATASET_MANAGEMENT_COMMAND_DW11 dsmInfo11;
+	NVME_IO_COMMAND *nvmeIOCmd;
+	NVME_COMPLETION nvmeCPL;
+	unsigned int opc;
+	nvmeIOCmd = (NVME_IO_COMMAND*)nvmeCmd->cmdDword;
+	/*		xil_printf("OPC = 0x%X\r\n", nvmeIOCmd->OPC);
+			xil_printf("PRP1[63:32] = 0x%X, PRP1[31:0] = 0x%X\r\n", nvmeIOCmd->PRP1[1], nvmeIOCmd->PRP1[0]);
+			xil_printf("PRP2[63:32] = 0x%X, PRP2[31:0] = 0x%X\r\n", nvmeIOCmd->PRP2[1], nvmeIOCmd->PRP2[0]);
+			xil_printf("dword10 = 0x%X\r\n", nvmeIOCmd->dword10);
+			xil_printf("dword11 = 0x%X\r\n", nvmeIOCmd->dword11);
+			xil_printf("dword12 = 0x%X\r\n", nvmeIOCmd->dword12);*/
 
-	dsmInfo10.dword = nvmeIOCmd->dword10;
-	dsmInfo11.dword = nvmeIOCmd->dword11;
-	trimDmaCnt++;
-	unsigned int nr = dsmInfo10.NR + 1;
-//	xil_printf("Request here, num of range: %d\r\n", nr);
-	ad = dsmInfo11.AD;
 
-	if (ad==1)
+	opc = (unsigned int)nvmeIOCmd->OPC;
+
+	switch(opc)
 	{
-		ReqTransNvmeToSliceForDSM(cmdSlotTag, nr);
-	}
-	else
-	{
-		xil_printf("No Discard\r\n");
+		case IO_NVM_FLUSH:
+		{
+		//	xil_printf("IO Flush Command\r\n");
+			nvmeCPL.dword[0] = 0;
+			nvmeCPL.specific = 0x0;
+			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+			break;
+		}
+		case IO_NVM_WRITE:
+		{
+//			xil_printf("IO Write Command\r\n");
+			handle_nvme_io_write(nvmeCmd->cmdSlotTag, nvmeIOCmd);
+			break;
+		}
+		case IO_NVM_READ:
+		{
+//			xil_printf("IO Read Command\r\n");
+			handle_nvme_io_read(nvmeCmd->cmdSlotTag, nvmeIOCmd);
+			break;
+		}
+		case IO_NVM_DATASET_MANAGEMENT:
+		{
+//			xil_printf("IO Dataset Management Command\r\n");
+			handle_nvme_io_dataset_management(nvmeCmd->cmdSlotTag, nvmeIOCmd);
+			break;
+		}
+		case IO_NVM_WRITE_ZEROS:
+		{
+//			xil_printf("IO Write Zeros Command\r\n");
+			nvmeCPL.dword[0] = 0;
+			nvmeCPL.specific = 0x0;
+			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
+			break;
+		}
+		default:
+		{
+			xil_printf("Not Support IO Command OPC: %X\r\n", opc);
+			ASSERT(0);
+			break;
+		}
 	}
 }
 
-void handle_asyncTrim(int forced)
+void handle_asyncTrim(unsigned int forced)
 {
 	int blk0, blk1, blk2, blk3, tempSlba , tempNlb;
 	int nlb, slba, bufEntry, hashIndex;
@@ -158,20 +220,15 @@ void handle_asyncTrim(int forced)
 	{
 		slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
 		nlb = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
-//		xil_printf("handle_asyncTrim SelectiveGetFromDsmRangeHashList\r\n");
-//		xil_printf("bufEntry: %d\r\n", bufEntry);
-
+//		xil_printf("do trim start lba: %d\r\n", slba);
+//		xil_printf("do trim num of blocks: %d\r\n", nlb);
 		nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
-//		xil_printf("nextEntry1: %u\r\n", nextEntry);
 
 		SelectiveGetFromDsmRangeHashList(bufEntry);
 		blk0 = 1;
 		blk1 = 1;
 		blk2 = 1;
 		blk3 = 1;
-
-//		xil_printf("nlb : %d\r\n",nlb);
-//		xil_printf("slba : %d\r\n",slba);
 
 		if((nlb>0)&&(slba>=0)&&(nlb<(SLICES_PER_SSD * 4))&&(slba<(SLICES_PER_SSD * 4)))
 		{
@@ -225,9 +282,7 @@ void handle_asyncTrim(int forced)
 				}
 			}
 			else
-			{
 				blk3 = 0;
-			}
 
 			TRIM(slba, blk0, blk1, blk2, blk3);
 
@@ -249,9 +304,7 @@ void handle_asyncTrim(int forced)
 			blk3 = 1;
 
 			if (nlb == 1)
-			{
 				blk0 = 0;
-			}
 			else if (nlb == 2)
 			{
 				blk0 = 0;
@@ -277,10 +330,9 @@ void handle_asyncTrim(int forced)
 			{
 				cmd_by_trim = check_nvme_cmd_come();
 				if(cmd_by_trim == 1)
-				{
 					return;
-				}
 			}
+
 		}
 		if ((hashIndex == 0) && dsmRangeHashTable->dsmRangeHash[hashIndex].headEntry == DATA_BUF_NONE)
 			bufEntry = DATA_BUF_NONE;
@@ -296,7 +348,7 @@ void handle_asyncTrim(int forced)
 						bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
 						hashIndex = j;
 						break;
-					}
+						}
 					bufEntry = DATA_BUF_NONE;
 				}
 			}
@@ -308,62 +360,7 @@ void handle_asyncTrim(int forced)
 	for (int i = 0; i < BITMAP_SIZE; i++)
 		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
 
+	do_trim_flag = 0;
 	trim_flag = 0;
-	trim_perf_flag = 0;
-	nr_sum = 0;
-}
-
-void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
-{
-	NVME_IO_COMMAND *nvmeIOCmd;
-	NVME_COMPLETION nvmeCPL;
-	unsigned int opc;
-	nvmeIOCmd = (NVME_IO_COMMAND*)nvmeCmd->cmdDword;
-
-	opc = (unsigned int)nvmeIOCmd->OPC;
-
-	switch(opc)
-	{
-		case IO_NVM_FLUSH:
-		{
-		//	xil_printf("IO Flush Command\r\n");
-			nvmeCPL.dword[0] = 0;
-			nvmeCPL.specific = 0x0;
-			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
-			break;
-		}
-		case IO_NVM_WRITE:
-		{
-//			xil_printf("IO Write Command\r\n");
-			handle_nvme_io_write(nvmeCmd->cmdSlotTag, nvmeIOCmd);
-			break;
-		}
-		case IO_NVM_READ:
-		{
-//			xil_printf("IO Read Command\r\n");
-			handle_nvme_io_read(nvmeCmd->cmdSlotTag, nvmeIOCmd);
-			break;
-		}
-		case IO_NVM_DATASET_MANAGEMENT:
-		{
-//			xil_printf("IO Dataset Management Command\r\n");
-			handle_nvme_io_dataset_management(nvmeCmd->cmdSlotTag, nvmeIOCmd);
-			break;
-		}
-		case IO_NVM_WRITE_ZEROS:
-		{
-//			xil_printf("IO Write Zeros Command\r\n");
-			nvmeCPL.dword[0] = 0;
-			nvmeCPL.specific = 0x0;
-			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
-			break;
-		}
-		default:
-		{
-			xil_printf("Not Support IO Command OPC: %X\r\n", opc);
-			ASSERT(0);
-			break;
-		}
-	}
 }
 

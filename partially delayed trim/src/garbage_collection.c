@@ -70,7 +70,8 @@ void InitGcVictimMap()
 
 void GarbageCollection(unsigned int dieNo)
 {
-	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, blk0, blk1, blk2, blk3;
+	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, copyCNT;
+//	copyCNT = 0;
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
 	dieNoForGcCopy = dieNo;
@@ -82,14 +83,12 @@ void GarbageCollection(unsigned int dieNo)
 			virtualSliceAddr = Vorg2VsaTranslation(dieNo, victimBlockNo, pageNo);
 			logicalSliceAddr = virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr;
 
+//			if((logicalSliceAddr != LSA_NONE) && (copyCNT < print_cnt+1))
 			if(logicalSliceAddr != LSA_NONE)
 				if(logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr ==  virtualSliceAddr) //valid data
 				{
-					blk0 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk0;
-					blk1 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk1;
-					blk2 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk2;
-					blk3 = logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk3;
-
+//					real_copy_cnt += 1;
+//					copyCNT += 1;
 					//read
 					reqSlotTag = GetFromFreeReqQ();
 
@@ -109,7 +108,6 @@ void GarbageCollection(unsigned int dieNo)
 					SelectLowLevelReqQ(reqSlotTag);
 
 					//write
-					gc_cnt++;
 					reqSlotTag = GetFromFreeReqQ();
 
 					reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_NAND;
@@ -127,17 +125,15 @@ void GarbageCollection(unsigned int dieNo)
 
 					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
 					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk0 = blk0;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk1 = blk1;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk2 = blk2;
-					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].blk3 = blk3;
 
 					SelectLowLevelReqQ(reqSlotTag);
 				}
 		}
+//		print_cnt += 1;
 	}
 
 	EraseBlock(dieNo, victimBlockNo);
+	SyncAllLowLevelReqDone();
 }
 
 
@@ -190,6 +186,23 @@ unsigned int GetFromGcVictimList(unsigned int dieNo)
 	return BLOCK_FAIL;
 }
 
+unsigned int GetFromGcVictimListNum(unsigned int dieNo)
+{
+	unsigned int evictedBlockNo;
+	int invalidSliceCnt;
+
+	for(invalidSliceCnt = SLICES_PER_BLOCK; invalidSliceCnt > 0 ; invalidSliceCnt--)
+	{
+		if(gcVictimMapPtr->gcVictimList[dieNo][invalidSliceCnt].headBlock != BLOCK_NONE)
+		{
+			evictedBlockNo = gcVictimMapPtr->gcVictimList[dieNo][invalidSliceCnt].headBlock;
+			return evictedBlockNo;
+		}
+	}
+
+	assert(!"[WARNING] There are no free blocks. Abort terminate this ssd. [WARNING]");
+	return BLOCK_FAIL;
+}
 
 void SelectiveGetFromGcVictimList(unsigned int dieNo, unsigned int blockNo)
 {

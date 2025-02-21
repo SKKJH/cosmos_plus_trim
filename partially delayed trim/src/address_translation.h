@@ -50,13 +50,12 @@
 #include "ftl_config.h"
 #include "nvme/nvme.h"
 
-#define LSA_NONE	0xfffffff
-#define LSA_FAIL	0xfffffff
-#define LSA_DSM		0xffffff0
+#define LSA_NONE	0xffffffff
+#define LSA_FAIL	0xffffffff
+#define LSA_DSM		0xfffffff0
 
-#define VSA_NONE	0xfffffff
-#define VSA_FAIL	0xfffffff
-#define VSA_DSM		0xffffff0
+#define VSA_NONE	0xffffffff
+#define VSA_FAIL	0xffffffff
 
 #define PAGE_NONE		0xffff
 
@@ -112,24 +111,25 @@
 
 //for logical to virtual translation
 typedef struct _LOGICAL_SLICE_ENTRY {
-	unsigned int virtualSliceAddr : 28;
-	unsigned int blk0 : 1;
-	unsigned int blk1 : 1;
-	unsigned int blk2 : 1;
-	unsigned int blk3 : 1;
+	unsigned int virtualSliceAddr;
+	unsigned int blk0 : 8;
+	unsigned int blk1 : 8;
+	unsigned int blk2 : 8;
+	unsigned int blk3 : 8;
 } LOGICAL_SLICE_ENTRY, *P_LOGICAL_SLICE_ENTRY;
 
 typedef struct _LOGICAL_SLICE_MAP {
 	LOGICAL_SLICE_ENTRY logicalSlice[SLICES_PER_SSD];
 } LOGICAL_SLICE_MAP, *P_LOGICAL_SLICE_MAP;
 
+
 //for virtual to logical  translation
 typedef struct _VIRTUAL_SLICE_ENTRY {
-	unsigned int logicalSliceAddr : 28;
-	unsigned int blk0 : 1;
-	unsigned int blk1 : 1;
-	unsigned int blk2 : 1;
-	unsigned int blk3 : 1;
+	unsigned int logicalSliceAddr;
+	unsigned int blk0 : 8;
+	unsigned int blk1 : 8;
+	unsigned int blk2 : 8;
+	unsigned int blk3 : 8;
 } VIRTUAL_SLICE_ENTRY, *P_VIRTUAL_SLICE_ENTRY;
 
 typedef struct _VIRTUAL_SLICE_MAP {
@@ -150,6 +150,7 @@ typedef struct _VIRTUAL_BLOCK_ENTRY {
 typedef struct _VIRTUAL_BLOCK_MAP {
 	VIRTUAL_BLOCK_ENTRY block[USER_DIES][USER_BLOCKS_PER_DIE];
 } VIRTUAL_BLOCK_MAP, *P_VIRTUAL_BLOCK_MAP;
+
 
 typedef struct _VIRTUAL_DIE_ENTRY {
 	unsigned int currentBlock : 16;
@@ -197,7 +198,7 @@ void InitSliceMap();
 void InitBlockDieMap();
 
 unsigned int AddrTransRead(unsigned int logicalSliceAddr);
-unsigned int AddrTransWrite(unsigned int logicalSliceAddr);
+unsigned int AddrTransWrite(unsigned int dataBufEntry);
 unsigned int FindFreeVirtualSlice();
 unsigned int FindFreeVirtualSliceForGc(unsigned int copyTargetDieNo, unsigned int victimBlockNo);
 unsigned int FindDieForFreeSliceAllocation();

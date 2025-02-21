@@ -248,6 +248,7 @@ unsigned int check_nvme_cmd_come()
 	return (unsigned int)nvmeReg.cmdValid;
 }
 
+
 unsigned int get_nvme_cmd(unsigned short *qID, unsigned short *cmdSlotTag, unsigned int *cmdSeqNum, unsigned int *cmdDword)
 {
 	NVME_CMD_FIFO_REG nvmeReg;
@@ -258,9 +259,7 @@ unsigned int get_nvme_cmd(unsigned short *qID, unsigned short *cmdSlotTag, unsig
 		nvmeReg.dword = global_nvmeReg.dword;
 	}
 	else
-	{
 		nvmeReg.dword = IO_READ32(NVME_CMD_FIFO_REG_ADDR);
-	}
 
 	if(nvmeReg.cmdValid == 1)
 	{

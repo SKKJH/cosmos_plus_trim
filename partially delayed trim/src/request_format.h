@@ -158,11 +158,11 @@ typedef struct _SSD_REQ_FORMAT
 	unsigned int reqCode : 8;
 	unsigned int nvmeCmdSlotTag : 16;
 
-	unsigned int logicalSliceAddr : 28;
-	unsigned int blk0 : 1;
-	unsigned int blk1 : 1;
-	unsigned int blk2 : 1;
-	unsigned int blk3 : 1;
+	unsigned int logicalSliceAddr;
+	unsigned int blk0 : 8;
+	unsigned int blk1 : 8;
+	unsigned int blk2 : 8;
+	unsigned int blk3 : 8;
 
 	REQ_OPTION reqOpt;
 	DATA_BUF_INFO dataBufInfo;
@@ -173,6 +173,7 @@ typedef struct _SSD_REQ_FORMAT
 	unsigned int nextReq : 16;
 	unsigned int prevBlockingReq : 16;
 	unsigned int nextBlockingReq : 16;
+
 } SSD_REQ_FORMAT, *P_SSD_REQ_FORMAT;
 
 #endif /* REQUEST_FORMAT_H_ */

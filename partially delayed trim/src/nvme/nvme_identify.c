@@ -1,3 +1,4 @@
+
 //////////////////////////////////////////////////////////////////////////////////
 // nvme_identify.c for Cosmos+ OpenSSD
 // Copyright (c) 2016 Hanyang University ENC Lab.
@@ -113,7 +114,7 @@ void identify_controller(unsigned int pBuffer)
 
 	identifyCNTL->ONCS.supportsCompare = 0x0;
 	identifyCNTL->ONCS.supportsWriteUncorrectable = 0x0;
-	identifyCNTL->ONCS.supportsDataSetManagement = 0x1;
+	identifyCNTL->ONCS.supportsDataSetManagement = 0x0;
 
 	identifyCNTL->FUSES.supportsCompareWrite = 0x0;
 

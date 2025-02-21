@@ -76,6 +76,7 @@ void SelectiveGetFromBlockedByRowAddrDepReqQ(unsigned int reqSlotTag, unsigned i
 
 void PutToNvmeDmaReqQ(unsigned int reqSlotTag);
 void SelectiveGetFromNvmeDmaReqQ(unsigned int regSlotTag);
+void PerformDeallocation(unsigned int reqSlotTag);
 
 void PutToNandReqQ(unsigned int reqSlotTag, unsigned chNo, unsigned wayNo);
 void GetFromNandReqQ(unsigned int chNo, unsigned int wayNo, unsigned int reqStatus, unsigned int reqCode);

@@ -577,11 +577,14 @@ void PerformDeallocation(unsigned int reqSlotTag)
 	trim_flag = 0;
 }
 
-void ForcedTRIM()
+void ForcedTRIM(unsigned int cnt)
 {
+	if (cnt > 7)
+		return;
+
 	int TOTAL_BLOCKS = 3145728;
 
-	int nlb = 32768*8;
+	int nlb = 32768 * (cnt + 1);
 	int slba = rand() % (TOTAL_BLOCKS - nlb);
 	while(nlb > 4)
 	{

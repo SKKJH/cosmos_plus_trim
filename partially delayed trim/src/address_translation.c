@@ -47,8 +47,8 @@
 
 #include <assert.h>
 #include "memory_map.h"
-#include "nvme/nvme_io_cmd.h"
 #include "xil_printf.h"
+#include "nvme/nvme_io_cmd.h"
 
 P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
 P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
@@ -556,7 +556,6 @@ void EraseTotalBlockSpace()
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 			reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_TOTAL;
-//			reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalCh = Vdie2PchTranslation(dieNo);
 			reqPoolPtr->reqPool[reqSlotTag].nandInfo.physicalWay = Vdie2PwayTranslation(dieNo);
@@ -590,7 +589,6 @@ void EraseUserBlockSpace()
 				reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 				reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_NONE;
 				reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
-//				reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 
 				reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, 0);
 
@@ -703,15 +701,15 @@ unsigned int FindFreeVirtualSlice()
 			if(trim_flag != 0)
 			{
 				victimBlockNo = GetFromGcVictimList(dieNo);
-				if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt < SLICES_PER_BLOCK/2)
+				if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt < SLICES_PER_BLOCK/2) // 수정 필요
 				{
 					handle_asyncTrim(1);
 				}
 			}
 
 			GarbageCollection(dieNo);
-			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
 
+			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
 			if(virtualBlockMapPtr->block[dieNo][currentBlock].currentPage == USER_PAGES_PER_BLOCK)
 			{
 				currentBlock = GetFromFbList(dieNo, GET_FREE_BLOCK_NORMAL);
@@ -806,10 +804,6 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr)
 		SelectiveGetFromGcVictimList(dieNo, blockNo);
 		virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt++;
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = VSA_NONE;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk0 = 0;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk1 = 0;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk2 = 0;
-		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk3 = 0;
 
 		PutToGcVictimList(dieNo, blockNo, virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt);
 	}
@@ -829,7 +823,6 @@ void EraseBlock(unsigned int dieNo, unsigned int blockNo)
 	reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_NONE;
 	reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_CHECK;
 	reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
-//	reqPoolPtr->reqPool[reqSlotTag].reqOpt.trimDmaFlag = 0;
 	reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, 0);
 	reqPoolPtr->reqPool[reqSlotTag].nandInfo.programmedPageCnt = virtualBlockMapPtr->block[dieNo][blockNo].currentPage;
 
@@ -847,10 +840,6 @@ void EraseBlock(unsigned int dieNo, unsigned int blockNo)
 	{
 		virtualSliceAddr = Vorg2VsaTranslation(dieNo, blockNo, pageNo);
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = LSA_NONE;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk0 = 0;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk1 = 0;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk2 = 0;
-		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk3 = 0;
 	}
 }
 

@@ -70,7 +70,9 @@ void InitGcVictimMap()
 
 void GarbageCollection(unsigned int dieNo)
 {
+	static XTime tStart, tEnd;
 	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, og_valid_page, new_valid_page;
+
 	gc_cnt += 1;
 
 	victimBlockNo = GetFromGcVictimListNum(dieNo);
@@ -79,21 +81,29 @@ void GarbageCollection(unsigned int dieNo)
 	og_valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
 	gc_copy += og_valid_page;
 
-	if((gc_trim_cnt < 2))
+	if(og_valid_page > 32)
 	{
 		if (gc_cnt >= start_point)
 		{
-			ForcedTRIM();
+			XTime_GetTime(&tStart);
+			ForcedTRIM(gc_trim_cnt);
+			XTime_GetTime(&tEnd);
 			gc_trim_f = 1;
-			gc_trim_cnt++;
-			start_point += thres;
+//			start_point += thres;
 		}
 	}
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
 	new_valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
-	rd_gc_copy += new_valid_page;
+//	rd_gc_copy += new_valid_page;
 
+	if (og_valid_page > new_valid_page) {
+		gc_trim_cnt++;
+		xil_printf("TRIM OVERHEAD: %u MB\r\n", (32768 * gc_trim_cnt * 4) / 1024);
+		print_clock_cycles(tStart, tEnd);
+	}
+
+	XTime_GetTime(&tStart);
 	if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt != SLICES_PER_BLOCK)
 	{
 		for(pageNo=0 ; pageNo<USER_PAGES_PER_BLOCK ; pageNo++)
@@ -148,6 +158,15 @@ void GarbageCollection(unsigned int dieNo)
 
 	EraseBlock(dieNo, victimBlockNo);
 	SyncAllLowLevelReqDone();
+
+	XTime_GetTime(&tEnd);
+
+	if (og_valid_page > new_valid_page) {
+		xil_printf("GC OVERHEAD\r\n");
+		xil_printf("og_valid_page: %u\t\t\t", og_valid_page);
+		xil_printf("new valid page: %u\n", new_valid_page);
+		print_clock_cycles(tStart, tEnd);
+	}
 }
 
 //void T_GC(unsigned int dieNo)

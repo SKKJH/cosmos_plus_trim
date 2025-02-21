@@ -686,7 +686,7 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 unsigned int FindFreeVirtualSlice()
 {
 	unsigned int currentBlock, virtualSliceAddr, dieNo;
-	static XTime tStart, tEnd;
+//	static XTime tStart, tEnd;
 
 	dieNo = sliceAllocationTargetDie;
 	currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
@@ -699,16 +699,16 @@ unsigned int FindFreeVirtualSlice()
 			virtualDieMapPtr->die[dieNo].currentBlock = currentBlock;
 		else
 		{
-			XTime_GetTime(&tStart);
+//			XTime_GetTime(&tStart);
 			GarbageCollection(dieNo);
-			XTime_GetTime(&tEnd);
-			ov_cnt += (tEnd - tStart);
-			if (gc_trim_f == 1)
-			{
-				gc_trim_f = 0;
-				xil_printf("GC TRIM CALLED\r\n");
-			}
-			print_clock_cycles(tStart, tEnd);
+//			XTime_GetTime(&tEnd);
+//			ov_cnt += (tEnd - tStart);
+//			if (gc_trim_f == 1)
+//			{
+//				gc_trim_f = 0;
+//				xil_printf("GC TRIM CALLED\r\n");
+//			}
+//			print_clock_cycles(tStart, tEnd);
 
 			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
 			if(virtualBlockMapPtr->block[dieNo][currentBlock].currentPage == USER_PAGES_PER_BLOCK)

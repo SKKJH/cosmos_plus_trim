@@ -520,7 +520,7 @@ void handle_nvme_admin_cmd(NVME_COMMAND *nvmeCmd)
 
 	set_nvme_cpl(nvmeCmd->qID, nvmeAdminCmd->CID, nvmeCPL.specific, nvmeCPL.statusFieldWord);
 
-//	xil_printf("Done Admin Command OPC: %X\r\n", opc);
+	xil_printf("Done Admin Command OPC: %X\r\n", opc);
 
 }
 

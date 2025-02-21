@@ -340,9 +340,9 @@ void set_nvme_csts_shst(unsigned int shst);
 
 void set_nvme_admin_queue(unsigned int sqValid, unsigned int cqValid, unsigned int cqIrqEn);
 
-unsigned int check_nvme_cmd_come();
-
 unsigned int get_nvme_cmd(unsigned short *qID, unsigned short *cmdSlotTag, unsigned int *cmdSeqNum, unsigned int *cmdDword);
+
+unsigned int check_nvme_cmd_come();
 
 void set_auto_nvme_cpl(unsigned int cmdSlotTag, unsigned int specific, unsigned int statusFieldWord);
 
