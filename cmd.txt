@@ -1,0 +1,16 @@
+sudo fdisk /dev/nvme0n1
+sudo mkfs.f2fs -E discard /dev/nvme0n1p1
+sudo mount -O discard /dev/nvme0n1p1 /media/nvme/
+sudo su
+echo 0 > /proc/sys/kernel/randomize_va_space
+filebench -f wd_filebench/varmail.f
+
+
+
+
+mkdir /media/nvme/bigfileset
+fio wd_filebench/pre-write.fio
+nvme read /dev/nvme0n1 -c 77 -s 77 -z 4096
+filebench -f wd_filebench/varmail.f
+nvme read /dev/nvme0n1 -c 77 -s 77 -z 4096
+sudo mkfs.ext4 -E discard /dev/nvme0n1p1

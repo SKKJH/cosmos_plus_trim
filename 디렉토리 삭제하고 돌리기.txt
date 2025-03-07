@@ -1,0 +1,10 @@
+Sequential Write 이후 Varmail
+
+디렉토리 삭제 전
+write_cnt: 1197445, trim_cnt: 11235, gc_cnt: 9797
+write_cnt and trim_cnt initialized
+
+디렉토리 삭제 후
+write_cnt: 1193120, trim_cnt: 11963, gc_cnt: 9694
+write_cnt and trim_cnt initialized
+

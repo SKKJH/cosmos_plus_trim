@@ -1,0 +1,17 @@
+write_cnt: 716045, trim_cnt: 5, gc_cnt: 0
+write_cnt and trim_cnt initialized
+write_cnt: 20864, trim_cnt: 0, gc_cnt: 0
+write_cnt and trim_cnt initialized
+write_cnt: 24160, trim_cnt: 0, gc_cnt: 0
+write_cnt and trim_cnt initialized
+write_cnt: 85728, trim_cnt: 0, gc_cnt: 0
+write_cnt and trim_cnt initialized
+write_cnt: 6464, trim_cnt: 0, gc_cnt: 0
+write_cnt and trim_cnt initialized
+write_cnt: 20, trim_cnt: 0, gc_cnt: 0
+write_cnt and trim_cnt initialized
+write_cnt: 0, trim_cnt: 0, gc_cnt: 0
+write_cnt and trim_cnt initialized
+============================
+write_cnt: 983144, trim_cnt: 4645, gc_cnt: 6168
+write_cnt and trim_cnt initialized

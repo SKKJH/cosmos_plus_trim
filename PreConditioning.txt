@@ -1,0 +1,29 @@
+pre conditioning (10GB)
+write_cnt: 1399, trim_cnt: 5
+write_cnt and trim_cnt initialized
+=========================
+write_cnt: 657378, trim_cnt: 0, gc_cnt: 0
+write_cnt and trim_cnt initialized
+=========================
+
+varmail
+106.353: Per-Operation Breakdown
+closefile4           98650ops     1644ops/s   0.0mb/s    0.001ms/op [0.000ms - 0.847ms]
+readfile4            98650ops     1644ops/s  25.8mb/s    0.009ms/op [0.002ms - 14.197ms]
+openfile4            98650ops     1644ops/s   0.0mb/s    0.009ms/op [0.003ms - 0.955ms]
+closefile3           98650ops     1644ops/s   0.0mb/s    0.002ms/op [0.001ms - 3.444ms]
+fsyncfile3           98650ops     1644ops/s   0.0mb/s    4.897ms/op [0.045ms - 507.725ms]
+appendfilerand3      98656ops     1644ops/s  22.6mb/s    0.184ms/op [0.003ms - 396.684ms]
+readfile3            98656ops     1644ops/s  25.7mb/s    0.009ms/op [0.002ms - 14.202ms]
+openfile3            98656ops     1644ops/s   0.0mb/s    0.009ms/op [0.003ms - 12.651ms]
+closefile2           98656ops     1644ops/s   0.0mb/s    0.002ms/op [0.001ms - 0.803ms]
+fsyncfile2           98656ops     1644ops/s   0.0mb/s    4.239ms/op [0.041ms - 234.337ms]
+appendfilerand2      98664ops     1644ops/s  22.5mb/s    0.014ms/op [0.004ms - 0.443ms]
+createfile2          98666ops     1644ops/s   0.0mb/s    0.065ms/op [0.017ms - 226.967ms]
+deletefile1          98666ops     1644ops/s   0.0mb/s    0.232ms/op [0.014ms - 503.237ms]
+106.353: IO Summary: 1282526 ops 21374.018 ops/s 3288/3288 rd/wr  96.5mb/s 0.744ms/op
+106.353: Shutting down processes
+root@kjh-All-Series:/home/kjh/wd_filebench#
+
+write_cnt: 950231, trim_cnt: 12731, gc_cnt: 4392
+write_cnt and trim_cnt initialized
