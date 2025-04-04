@@ -660,6 +660,7 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 
 	if(logicalSliceAddr < SLICES_PER_SSD)
 	{
+		real_write_cnt++;
 		InvalidateOldVsa(logicalSliceAddr);
 
 		virtualSliceAddr = FindFreeVirtualSlice();
@@ -698,15 +699,6 @@ unsigned int FindFreeVirtualSlice()
 			virtualDieMapPtr->die[dieNo].currentBlock = currentBlock;
 		else
 		{
-			if(trim_flag != 0)
-			{
-				victimBlockNo = GetFromGcVictimList(dieNo);
-				if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt < SLICES_PER_BLOCK/2) // 수정 필요
-				{
-					handle_asyncTrim(1);
-				}
-			}
-
 			GarbageCollection(dieNo);
 
 			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
@@ -806,6 +798,7 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr)
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = VSA_NONE;
 
 		PutToGcVictimList(dieNo, blockNo, virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt);
+		real_write_cnt--;
 	}
 
 }

@@ -48,6 +48,6 @@
 #define __NVME_IO_CMD_H_
 
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd);
-void handle_asyncTrim(unsigned int forced);
+void handle_asyncTrim(unsigned int forced, unsigned int Range);
 
 #endif	//__NVME_IO_CMD_H_

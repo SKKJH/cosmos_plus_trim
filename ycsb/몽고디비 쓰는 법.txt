@@ -1,0 +1,57 @@
+nvme read /dev/nvme0n1 -c 77 -s 77 -z 4096
+
+ cd /home/kjh/linux-6.11
+make M=fs/f2fs/
+
+cd linux-6.11/fs/f2fs/
+sudo modprobe f2fs
+sudo rmmod f2fs
+sudo insmod f2fs.ko
+
+sudo mkfs.f2fs -E discard /dev/nvme0n1
+sudo mkfs.f2fs -f -E discard /dev/nvme0n1
+
+sudo mount /dev/nvme0n1 /media/nvme
+sudo mkdir /media/nvme/mongodb
+sudo mkdir /media/nvme/bigfileset
+
+sudo systemctl stop mongod
+
+sudo cp -R /var/lib/mongodb/* /media/mongodb/ (기존 MongoDB 데이터를 복사(있다면))
+
+sudo chown -R mongodb:mongodb /media/nvme/mongodb
+sudo chmod 700 /media/nvme/mongodb
+
+/etc/mongod.conf 수정
+	storage:
+  		dbPath: /media/nvme/mongodb
+
+sudo systemctl start mongod
+sudo systemctl status mongod
+
+sudo ./run_wd.sh
+
+데이터 적재
+cd /home/kjh/ycsb-0.17.0
+./bin/ycsb load mongodb -s \
+  -P workloads/workloada \
+  -p mongodb.url="mongodb://127.0.0.1:27017/ycsb" \
+  > outputLoad.txt
+
+실행 단계
+./bin/ycsb run mongodb -s \
+  -P workloads/workloada \
+  -p mongodb.url="mongodb://127.0.0.1:27017/ycsb" \
+  > F2FS_W.txt
+
+./bin/ycsb load mongodb -s \
+  -P workloads/WA1 \
+  -p mongodb.url="mongodb://127.0.0.1:27017/ycsb" \
+  > F2FS_D.txt
+
+
+====================================
+NOMAD
+ssh kjh990705@115.145.135.111 -p 1100
+
+ssh kjh@127.0.0.1 -p 8080

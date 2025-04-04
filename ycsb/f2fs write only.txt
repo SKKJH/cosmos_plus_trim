@@ -1,0 +1,18 @@
+=========================================================
+INITIALIZED
+write_cnt: 2291, trim_cnt: 0, gc_cnt: 0, gc copy cnt: 0
+utilization: 0 Percent
+write_cnt and trim_cnt initialized
+=========================================================
+=========================================================
+LOAD DONE
+write_cnt: 632219, trim_cnt: 0, gc_cnt: 0, gc copy cnt: 0
+utilization: 40 Percent
+write_cnt and trim_cnt initialized
+=========================================================
+=========================================================
+RUN DONE
+write_cnt: 2182560, trim_cnt: 0, gc_cnt: 18900, gc copy cnt: 649288
+utilization: 93 Percent
+write_cnt and trim_cnt initialized
+=========================================================

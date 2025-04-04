@@ -430,7 +430,7 @@ void PutToNvmeDmaReqQ(unsigned int reqSlotTag)
 
 void PerformDeallocation(unsigned int reqSlotTag)
 {
-    int tempval, tempval2;
+    unsigned int tempval, tempval2;
 	unsigned int *devAddr = (unsigned int*)GenerateDataBufAddr(reqSlotTag);
 	unsigned int nr = reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nr;
 	unsigned int newEntry;
@@ -440,25 +440,22 @@ void PerformDeallocation(unsigned int reqSlotTag)
         tempval = *(devAddr + 1);
         tempval2 = *(devAddr + 2);
 
-        // Validation check for boundaries
         if (((SLICES_PER_SSD * 4) < tempval) || ((SLICES_PER_SSD * 4) < tempval2))
         {
-        	xil_printf("deallocation validation error\r\n");
-            break;
+        	err++;
+        	break;
         }
 
-        nr_sum++;
+        trim_cnt++;
         newEntry = AllocateDSMBuf();
         dsmRangePtr->dsmRange[newEntry].lengthInLogicalBlocks = tempval;
+        dsmRangePtr->dsmRange[newEntry].RealLB = tempval;
         dsmRangePtr->dsmRange[newEntry].startingLBA[0] = tempval2;
-
-//		xil_printf("get trim start lba: %d\r\n", tempval2);
-//		xil_printf("get trim num of blocks: %d\r\n", tempval);
-
         PutToDsmRangeHashList(newEntry);
 		devAddr += 4;
 	}
 	do_trim_flag = 1;
+	trim_flag -= 1;
 }
 
 void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
@@ -491,9 +488,6 @@ void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
 
 	reqPoolPtr->reqPool[reqSlotTag].reqQueueType = REQ_QUEUE_TYPE_NONE;
 	nvmeDmaReqQ.reqCnt--;
-
-	if ((trim_flag == 1) && (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM))
-		PerformDeallocation(reqSlotTag);
 
 	PutToFreeReqQ(reqSlotTag);
 	ReleaseBlockedByBufDepReq(reqSlotTag);

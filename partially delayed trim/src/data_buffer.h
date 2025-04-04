@@ -58,6 +58,10 @@
 #define DATA_BUF_DIRTY	1
 #define DATA_BUF_CLEAN	0
 
+#define MAX_SAMPLES 1000
+#define MAX_PER_UTIL 10
+#define MAX_UTIL 101
+
 #define FindDataBufHashTableEntry(logicalSliceAddr) ((logicalSliceAddr) % AVAILABLE_DATA_BUFFER_ENTRY_COUNT)
 
 #define AVAILABLE_DSM_RANGE_ENTRY_COUNT					1024
@@ -115,6 +119,7 @@ typedef struct _DATASET_MANAGEMENT_RANGE
 {
 	DSMRangeUnion ContextAttributes;
 	unsigned int lengthInLogicalBlocks;
+	unsigned int RealLB;
 	unsigned int startingLBA[2];
 	unsigned int prevEntry : 16;
 	unsigned int nextEntry : 16;
@@ -141,6 +146,17 @@ typedef struct _DSM_RANGE_HASH_TABLE{
 	unsigned int Range_Flag[33];
 } DSM_RANGE_HASH_TABLE, *P_DSM_RANGE_HASH_TABLE;
 
+typedef struct _Regression_Entry {
+	unsigned int util;
+	unsigned int valid_page;
+} Regression_Entry, P_Regression_Entry;
+
+typedef struct _REG_BUF_MAP {
+	Regression_Entry regressionEnrty[MAX_SAMPLES];
+	unsigned int head;
+	unsigned int tail;
+} REG_BUF_MAP, *P_REG_BUF_MAP;
+
 void InitDataBuf();
 unsigned int CheckDataBufHit(unsigned int reqSlotTag);
 unsigned int AllocateDataBuf();
@@ -161,6 +177,12 @@ unsigned int FindDsmRangeHashTableEntry(unsigned int length);
 unsigned int SmallestDSMBuftoLRUList();
 void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3);
 
+unsigned int cmp(const void *a, const void *b);
+void train_model();
+void add_sample(unsigned int util, unsigned int valid_page);
+unsigned int get_sample_count();
+unsigned int predict_valid_page(int util);
+
 extern P_DATA_BUF_MAP dataBufMapPtr;
 extern DATA_BUF_LRU_LIST dataBufLruList;
 extern P_DATA_BUF_HASH_TABLE dataBufHashTable;
@@ -171,5 +193,6 @@ extern P_DSM_RANGE dsmRangePtr;
 extern DSM_RANGE_LRU_LIST dsmRangeLruList;
 extern P_DSM_RANGE_HASH_TABLE dsmRangeHashTable;
 
+extern P_REG_BUF_MAP regressionBufMapPtr;
 
 #endif /* DATA_BUFFER_H_ */

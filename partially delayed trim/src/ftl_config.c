@@ -171,14 +171,9 @@ void CheckConfigRestriction()
 }
 
 void print_clock_cycles(XTime tStart, XTime tEnd){
-	u32 tStart_high = (u32)(tStart >> 32);  // 상위 32비트
-	u32 tStart_low  = (u32)(tStart);        // 하위 32비트
-	u32 tEnd_high   = (u32)(tEnd >> 32);    // 상위 32비트
-	u32 tEnd_low    = (u32)(tEnd);          // 하위 32비트
 	u32 diff_high   = (u32)((tEnd - tStart) >> 32);
 	u32 diff_low    = (u32)(tEnd - tStart);
-
-	xil_printf("Start Time: High 0x%08X Low 0x%08X\r\n", tStart_high, tStart_low);
-	xil_printf("End Time  : High 0x%08X Low 0x%08X\r\n", tEnd_high, tEnd_low);
-	xil_printf("Elapsed Time: High 0x%08X Low 0x%08X\r\n\n", diff_high, diff_low);
+	xil_printf("High 0x%08X Low 0x%08X\r\n", diff_high, diff_low);
+	xil_printf("////////////////////////////////////\r\n");
 }
+

@@ -58,6 +58,7 @@
 typedef struct _REQ_POOL
 {
 	SSD_REQ_FORMAT reqPool[AVAILABLE_OUNTSTANDING_REQ_COUNT];
+	unsigned int dsmReqList[AVAILABLE_OUNTSTANDING_REQ_COUNT];
 } REQ_POOL, *P_REQ_POOL;
 
 void InitReqPool();

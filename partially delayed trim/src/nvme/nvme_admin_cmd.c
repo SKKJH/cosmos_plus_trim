@@ -504,6 +504,14 @@ void handle_nvme_admin_cmd(NVME_COMMAND *nvmeCmd)
 			nvmeCPL.specific = 0x0;
 			break;
 		}
+		case ADMIN_ABORT:
+		{
+			needCpl = 0;
+			needSlotRelease = 0;
+			nvmeCPL.dword[0] = 0;
+			nvmeCPL.specific = 0x0;
+			break;
+		}
 		default:
 		{
 			xil_printf("Not Support Admin Command OPC: %X\r\n", opc);

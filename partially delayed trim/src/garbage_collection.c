@@ -48,6 +48,7 @@
 #include "xil_printf.h"
 #include <assert.h>
 #include "memory_map.h"
+#include "nvme/nvme_io_cmd.h"
 
 P_GC_VICTIM_MAP gcVictimMapPtr;
 
@@ -70,25 +71,62 @@ void InitGcVictimMap()
 
 void GarbageCollection(unsigned int dieNo)
 {
-	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, copyCNT;
-//	copyCNT = 0;
+	gc_cnt++;
+	tcheck = 0;
+	static XTime tStart, tEnd;
+	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, valid_page, predicted_valid;
+	unsigned int utilization =
+			100 * (((real_write_cnt) * 16) / 1024) /
+		    		(storageCapacity_L / ((1024 * 1024) / BYTES_PER_NVME_BLOCK));
+
+	victimBlockNo = GetFromGcVictimListNum(dieNo);
+	valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
+	add_sample(utilization, valid_page);
+
+	if(do_trim_flag != 0)
+	{
+		if (train_init == 0)
+			reg_model.fallback_value = valid_page;
+		predicted_valid = predict_valid_page(utilization);
+
+		if (((predicted_valid > valid_page) && (((predicted_valid - valid_page)) > 5)) ||
+				((valid_page > predicted_valid) && (((valid_page - predicted_valid)) > 5)))
+		{
+			if (train_thres_check == 1)
+				train_thres += 1;
+
+			train_thres_check = 1;
+			if (train_thres > 1)
+			{
+				train_model();
+				tcheck = 1;
+				train_thres = 0;
+				train_thres_check = 0;
+			}
+		} else
+		{
+			train_thres = 0;
+			train_thres_check = 0;
+		}
+
+		if (tcheck == 1)
+			predicted_valid = predict_valid_page(utilization);
+
+		if((valid_page != 0) && (predicted_valid != 0))
+			handle_asyncTrim(1, predicted_valid);
+	}
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
 	dieNoForGcCopy = dieNo;
-
 	if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt != SLICES_PER_BLOCK)
 	{
 		for(pageNo=0 ; pageNo<USER_PAGES_PER_BLOCK ; pageNo++)
 		{
 			virtualSliceAddr = Vorg2VsaTranslation(dieNo, victimBlockNo, pageNo);
 			logicalSliceAddr = virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr;
-
-//			if((logicalSliceAddr != LSA_NONE) && (copyCNT < print_cnt+1))
 			if(logicalSliceAddr != LSA_NONE)
 				if(logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr ==  virtualSliceAddr) //valid data
 				{
-//					real_copy_cnt += 1;
-//					copyCNT += 1;
 					//read
 					reqSlotTag = GetFromFreeReqQ();
 
@@ -106,6 +144,7 @@ void GarbageCollection(unsigned int dieNo)
 					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = virtualSliceAddr;
 
 					SelectLowLevelReqQ(reqSlotTag);
+					SyncAllLowLevelReqDone();
 
 					//write
 					reqSlotTag = GetFromFreeReqQ();
@@ -127,13 +166,15 @@ void GarbageCollection(unsigned int dieNo)
 					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
 
 					SelectLowLevelReqQ(reqSlotTag);
+					SyncAllLowLevelReqDone();
+					gc_page_copy++;
 				}
 		}
-//		print_cnt += 1;
 	}
 
 	EraseBlock(dieNo, victimBlockNo);
 	SyncAllLowLevelReqDone();
+	train_init = 1;
 }
 
 

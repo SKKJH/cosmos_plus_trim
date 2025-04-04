@@ -59,6 +59,8 @@ P_DSM_RANGE dsmRangePtr;
 DSM_RANGE_LRU_LIST dsmRangeLruList;
 P_DSM_RANGE_HASH_TABLE dsmRangeHashTable;
 
+P_REG_BUF_MAP regressionBufMapPtr;
+
 void InitDataBuf()
 {
 	int bufEntry;
@@ -71,36 +73,37 @@ void InitDataBuf()
 	dsmRangePtr = (P_DSM_RANGE)DSM_RANGE_ADDR;
 	dsmRangeHashTable = (P_DSM_RANGE_HASH_TABLE)DSM_RANGE_HASH_TABLE_ADDR;
 
+	regressionBufMapPtr = (P_REG_BUF_MAP)TEMPORARY_REG_BUFFER_MAP_ADDR;
+
 	for (int i = 0; i < AVAILABLE_DSM_RANGE_ENTRY_COUNT; i++)
-		{
-			dsmRangePtr->dsmRange[i].lengthInLogicalBlocks = 0;
-			dsmRangePtr->dsmRange[i].startingLBA[0] = 0xffffffff;
-			dsmRangePtr->dsmRange[i].startingLBA[1] = 0xffffffff;
-			dsmRangePtr->dsmRange[i].ContextAttributes.value = 0;
+	{
+		dsmRangePtr->dsmRange[i].lengthInLogicalBlocks = 0;
+		dsmRangePtr->dsmRange[i].RealLB = 0;
+		dsmRangePtr->dsmRange[i].startingLBA[0] = 0xffffffff;
+		dsmRangePtr->dsmRange[i].startingLBA[1] = 0xffffffff;
+		dsmRangePtr->dsmRange[i].ContextAttributes.value = 0;
 
-			dsmRangePtr->dsmRange[i].prevEntry = i-1;
-			dsmRangePtr->dsmRange[i].nextEntry = i+1;
+		dsmRangePtr->dsmRange[i].prevEntry = i-1;
+		dsmRangePtr->dsmRange[i].nextEntry = i+1;
 
-			dsmRangePtr->dsmRange[i].hashPrevEntry = DATA_BUF_NONE;
-			dsmRangePtr->dsmRange[i].hashNextEntry = DATA_BUF_NONE;
-		}
+		dsmRangePtr->dsmRange[i].hashPrevEntry = DATA_BUF_NONE;
+		dsmRangePtr->dsmRange[i].hashNextEntry = DATA_BUF_NONE;
+	}
 
-		for (int i = 0; i < 33; i++)
-		{
-			dsmRangeHashTable->dsmRangeHash[i].headEntry = DATA_BUF_NONE;
-			dsmRangeHashTable->dsmRangeHash[i].tailEntry = DATA_BUF_NONE;
-			dsmRangeHashTable->Range_Flag[i] = 0;
-		}
+	for (int i = 0; i < 33; i++)
+	{
+		dsmRangeHashTable->dsmRangeHash[i].headEntry = DATA_BUF_NONE;
+		dsmRangeHashTable->dsmRangeHash[i].tailEntry = DATA_BUF_NONE;
+		dsmRangeHashTable->Range_Flag[i] = 0;
+	}
 
-		dsmRangePtr->dsmRange[0].prevEntry = DATA_BUF_NONE;
-		dsmRangePtr->dsmRange[AVAILABLE_DSM_RANGE_ENTRY_COUNT - 1].nextEntry = DATA_BUF_NONE;
-		dsmRangeLruList.headEntry = 0 ;
-		dsmRangeLruList.tailEntry = AVAILABLE_DSM_RANGE_ENTRY_COUNT - 1;
+	dsmRangePtr->dsmRange[0].prevEntry = DATA_BUF_NONE;
+	dsmRangePtr->dsmRange[AVAILABLE_DSM_RANGE_ENTRY_COUNT - 1].nextEntry = DATA_BUF_NONE;
+	dsmRangeLruList.headEntry = 0 ;
+	dsmRangeLruList.tailEntry = AVAILABLE_DSM_RANGE_ENTRY_COUNT - 1;
 
 	for (int i = 0; i < BITMAP_SIZE; i++)
-	{
 		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
-	}
 
 	for(bufEntry = 0; bufEntry < AVAILABLE_DATA_BUFFER_ENTRY_COUNT; bufEntry++)
 	{
@@ -128,6 +131,13 @@ void InitDataBuf()
 
 	for(bufEntry = 0; bufEntry < AVAILABLE_TEMPORARY_DATA_BUFFER_ENTRY_COUNT; bufEntry++)
 		tempDataBufMapPtr->tempDataBuf[bufEntry].blockingReqTail =  REQ_SLOT_TAG_NONE;
+
+	regressionBufMapPtr->head = 0;
+	regressionBufMapPtr->tail = 0;
+	for (int i = 0; i < MAX_SAMPLES; i++) {
+	    regressionBufMapPtr->regressionEnrty[i].util = 0;
+	    regressionBufMapPtr->regressionEnrty[i].valid_page = 0;
+	}
 }
 
 unsigned int CheckDataBufHit(unsigned int reqSlotTag)
@@ -442,7 +452,7 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 {
 	unsigned int hashEntry, newLength, currentEntry, prevEntry;
 
-	newLength = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
+	newLength = dsmRangePtr->dsmRange[bufEntry].RealLB;
 
 	if (newLength == 0)
 		return;
@@ -455,7 +465,7 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 
 	while (currentEntry != DATA_BUF_NONE)
 	{
-		if (dsmRangePtr->dsmRange[currentEntry].lengthInLogicalBlocks <= newLength)
+		if (dsmRangePtr->dsmRange[currentEntry].RealLB <= newLength)
 			break;
 		prevEntry = currentEntry;
 		currentEntry = dsmRangePtr->dsmRange[currentEntry].hashNextEntry;
@@ -508,11 +518,16 @@ void PutDSMBuftoLRUList(unsigned int bufEntry)
 void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry)
 {
 	unsigned int prevBufEntry, nextBufEntry, hashEntry;
+	if (bufEntry == DATA_BUF_NONE)
+	{
+		xil_printf("Wrong BufEntry for SelectiveGet\r\n");
+		return;
+	}
 
 	prevBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashPrevEntry;
 	nextBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
 
-	hashEntry = FindDsmRangeHashTableEntry(dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks);
+	hashEntry = FindDsmRangeHashTableEntry(dsmRangePtr->dsmRange[bufEntry].RealLB);
 
 	if((nextBufEntry != DATA_BUF_NONE) && (prevBufEntry != DATA_BUF_NONE))
 	{
@@ -546,27 +561,24 @@ unsigned int SmallestDSMBuftoLRUList()
 {
 	unsigned int smallest, smallestEntry, tmpEntry;
 	for (int i = 0; i < 21; i++)
-		if(dsmRangeHashTable->Range_Flag[i] == 1)
+	{
+		tmpEntry = dsmRangeHashTable->dsmRangeHash[i].headEntry;
+		smallest = dsmRangePtr->dsmRange[tmpEntry].RealLB;
+		smallestEntry = tmpEntry;
+		while(tmpEntry != DATA_BUF_NONE)
 		{
-			tmpEntry = dsmRangeHashTable->dsmRangeHash[i].headEntry;
-			smallest = dsmRangePtr->dsmRange[tmpEntry].lengthInLogicalBlocks;
-			smallestEntry = tmpEntry;
-			while(tmpEntry != DATA_BUF_NONE)
+			if (smallest > dsmRangePtr->dsmRange[tmpEntry].RealLB)
 			{
-				if (smallest > dsmRangePtr->dsmRange[tmpEntry].lengthInLogicalBlocks)
-				{
-					smallest = dsmRangePtr->dsmRange[tmpEntry].lengthInLogicalBlocks;
-					smallestEntry = tmpEntry;
-					tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
-				}
-				else
-					tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
-
+				smallest = dsmRangePtr->dsmRange[tmpEntry].RealLB;
+				smallestEntry = tmpEntry;
+				tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
 			}
-			SelectiveGetFromDsmRangeHashList(smallestEntry);
-			return smallestEntry;
+			else
+				tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
 		}
-	return DATA_BUF_NONE;
+	}
+	SelectiveGetFromDsmRangeHashList(smallestEntry);
+	return smallestEntry;
 }
 
 unsigned int AllocateDSMBuf()
@@ -575,9 +587,6 @@ unsigned int AllocateDSMBuf()
 
 	if(evictedEntry == DATA_BUF_NONE)
 		evictedEntry = SmallestDSMBuftoLRUList();
-
-	if (evictedEntry == DATA_BUF_NONE)
-		assert(!"[WARNING] There is no valid DSM buffer entry [WARNING]");
 
 	if(dsmRangePtr->dsmRange[evictedEntry].prevEntry != DATA_BUF_NONE)
 	{
@@ -692,4 +701,101 @@ void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int 
 			InvalidateOldVsa(lsa);
 		}
 	}
+}
+
+unsigned int cmp(const void *a, const void *b) {
+    return (*(int *)a - *(int *)b);
+}
+
+void add_sample(unsigned int util, unsigned int valid_page) {
+    // 다음에 쓸 위치 = tail
+    unsigned int index = regressionBufMapPtr->tail;
+
+    // 이전 util 값 제거 (버퍼가 가득 찼을 경우에만)
+    if ((regressionBufMapPtr->tail + 1) % MAX_SAMPLES == regressionBufMapPtr->head) {
+        int old_util = regressionBufMapPtr->regressionEnrty[regressionBufMapPtr->head].util;
+        util_count[old_util]--;  // 오래된 값 제거
+        regressionBufMapPtr->head = (regressionBufMapPtr->head + 1) % MAX_SAMPLES;  // head 이동
+    }
+
+    // 새 값 삽입
+    regressionBufMapPtr->regressionEnrty[index].util = util;
+    regressionBufMapPtr->regressionEnrty[index].valid_page = valid_page;
+
+    regressionBufMapPtr->tail = (regressionBufMapPtr->tail + 1) % MAX_SAMPLES;  // tail 이동
+    util_count[util]++;
+}
+
+unsigned int get_sample_count() {
+    if (regressionBufMapPtr->tail >= regressionBufMapPtr->head)
+        return regressionBufMapPtr->tail - regressionBufMapPtr->head;
+    else
+        return MAX_SAMPLES;
+}
+
+void train_model() {
+    int count = get_sample_count();
+    int sum_x = 0, sum_y = 0, sum_xx = 0, sum_xy = 0;
+    int idx = regressionBufMapPtr->head;
+    int util_first = regressionBufMapPtr->regressionEnrty[idx].util;
+    int util_all_same = 1;
+    int total = 0;
+
+    for (int i = 0; i < count; i++) {
+        int x = regressionBufMapPtr->regressionEnrty[idx].util;
+        int y = regressionBufMapPtr->regressionEnrty[idx].valid_page;
+
+        if (x != util_first)
+            util_all_same = 0;
+
+        sum_x += x;
+        sum_y += y;
+        sum_xx += x * x;
+        sum_xy += x * y;
+
+        total += y;
+        idx = (idx + 1) % MAX_SAMPLES;
+    }
+
+    if (util_all_same) {
+        reg_model.a_fixed = 0;
+        reg_model.b_fixed = 0;
+        reg_model.fallback_value = total / count;
+        reg_model.valid = 0;
+        fallback_cnt++;
+        return;
+    }
+
+    int n = count;
+    int denom = n * sum_xx - sum_x * sum_x;
+
+    reg_model.a_fixed = (int)(((n * sum_xy - sum_x * sum_y) * 1000) / denom);
+    reg_model.b_fixed = (int)((sum_y * 1000 - (int)(reg_model.a_fixed) * sum_x) / n);
+    reg_model.fallback_value = 0;
+    reg_model.valid = 1;
+    train_cnt++;
+}
+
+unsigned int predict_valid_page(int util) {
+    if (!reg_model.valid) {
+//        xil_printf(" 회귀 불가 또는 데이터 없음 → fallback 사용: valid_page = %d\n",
+//                   reg_model.fallback_value);
+    	return_fb++;
+        return reg_model.fallback_value;
+    }
+
+    int predicted = (reg_model.a_fixed * util + reg_model.b_fixed) / 1000;
+
+    int a_int = reg_model.a_fixed / 1000;
+    int a_frac = reg_model.a_fixed % 1000;
+    if (a_frac < 0) a_frac = -a_frac;
+
+    int b_int = reg_model.b_fixed / 1000;
+    int b_frac = reg_model.b_fixed % 1000;
+    if (b_frac < 0) b_frac = -b_frac;
+
+//    xil_printf(" 회귀 적용: y = (%d.%02d)x + (%d.%02d) → 예측값: %d\n",
+//               a_int, a_frac, b_int, b_frac, predicted);
+    return_rg++;
+    return predicted;
 }
