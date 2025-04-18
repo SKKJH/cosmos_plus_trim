@@ -237,12 +237,29 @@ void set_nvme_admin_queue(unsigned int sqValid, unsigned int cqValid, unsigned i
 	IO_WRITE32(NVME_ADMIN_QUEUE_SET_REG_ADDR, nvmeReg.dword);
 }
 
+unsigned int check_nvme_cmd_come()
+{
+	NVME_CMD_FIFO_REG nvmeReg;
+
+	nvmeReg.dword = IO_READ32(NVME_CMD_FIFO_REG_ADDR);
+
+	global_nvmeReg.dword = nvmeReg.dword;
+
+	return (unsigned int)nvmeReg.cmdValid;
+}
+
 
 unsigned int get_nvme_cmd(unsigned short *qID, unsigned short *cmdSlotTag, unsigned int *cmdSeqNum, unsigned int *cmdDword)
 {
 	NVME_CMD_FIFO_REG nvmeReg;
 	
-	nvmeReg.dword = IO_READ32(NVME_CMD_FIFO_REG_ADDR);
+	if (cmd_by_trim == 1)
+	{
+		cmd_by_trim = 0;
+		nvmeReg.dword = global_nvmeReg.dword;
+	}
+	else
+		nvmeReg.dword = IO_READ32(NVME_CMD_FIFO_REG_ADDR);
 
 	if(nvmeReg.cmdValid == 1)
 	{

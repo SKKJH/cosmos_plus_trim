@@ -65,24 +65,41 @@
 #include "nvme_main.h"
 #include "nvme_admin_cmd.h"
 #include "nvme_io_cmd.h"
+
 #include "../memory_map.h"
 
 volatile NVME_CONTEXT g_nvmeTask;
 
 void nvme_main()
 {
-	ov_cnt = 0;
+	dsmCount = 0;
+	for (int i=0; i<101; i++)
+		util_count[i] = 0;
 	unsigned int exeLlr;
 	unsigned int rstCnt = 0;
+	unsigned int time_cnt = 0;
+	real_write_cnt = 0;
+	do_trim_flag = 0;
 	trim_flag = 0;
+
 	gc_cnt = 0;
-	gc_trim_f = 0;
-	gc_trim_cnt = 0;
-	huge_gc = 0;
-	thres = 2000;
-	start_point = 100;
-	gc_copy = 0;
-	rd_gc_copy = 0;
+	write_cnt = 0;
+	trim_cnt = 0;
+	async_trim_cnt = 0;
+	gc_page_copy = 0;
+
+	cmd_by_trim = 0;
+	trim_perf = 0;
+
+	train_cnt = 0;
+	train_init = 0;
+	fallback_cnt = 0;
+	train_thres = 0;
+	tcheck = 0;
+
+	return_rg = 0;
+	return_fb = 0;
+
 	xil_printf("!!! Wait until FTL reset complete !!! \r\n");
 
 	InitFTL();
@@ -113,28 +130,49 @@ void nvme_main()
 			unsigned int cmdValid;
 			cmdValid = get_nvme_cmd(&nvmeCmd.qID, &nvmeCmd.cmdSlotTag, &nvmeCmd.cmdSeqNum, nvmeCmd.cmdDword);
 			if(cmdValid == 1)
-			{	rstCnt = 0;
+			{
+				rstCnt = 0;
 				if(nvmeCmd.qID == 0)
 				{
 					handle_nvme_admin_cmd(&nvmeCmd);
+					time_cnt=0;
 				}
 				else
 				{
 					handle_nvme_io_cmd(&nvmeCmd);
 					ReqTransSliceToLowLevel();
 					exeLlr=0;
+					time_cnt=0;
 				}
 			}
 		}
 		else if(g_nvmeTask.status == NVME_TASK_SHUTDOWN)
 		{
 
-			u32 diff_high = (u32)(ov_cnt >> 32);
-			u32 diff_low    = (u32)(ov_cnt);
-			xil_printf("Total Overhead: High 0x%08X Low 0x%08X\r\n", diff_high, diff_low);
-			xil_printf("Total GC Copy Cnt: %u\r\n", gc_copy);
-			xil_printf("Total Reduce GC Copy Cnt: %u\r\n", rd_gc_copy);
-			xil_printf("Total GC Called: %u\r\n", gc_cnt);
+			xil_printf("=========================================================\r\n");
+			xil_printf("parameter information\r\n");
+			xil_printf("write_cnt: %u, gc_cnt: %u, gc copy cnt: %u\n", write_cnt, gc_cnt, gc_page_copy);
+			xil_printf("requested trim cnt: %u, performed trim cnt: %u\n", trim_cnt, async_trim_cnt);
+			xil_printf("regression train cnt: %u, fallback train cnt: %u\n", train_cnt, fallback_cnt);
+			xil_printf("regression return cnt: %u, fallback return cnt: %u\n", return_rg, return_fb);
+
+			unsigned int util=
+					100 * (((real_write_cnt) * 16) / 1024) /
+					(storageCapacity_L / ((1024 * 1024) / BYTES_PER_NVME_BLOCK));
+
+			xil_printf("utilization: %d Percent\n", util);
+			write_cnt = 0;
+			trim_cnt = 0;
+			err = 0;
+			async_trim_cnt = 0;
+			gc_cnt = 0;
+			gc_page_copy = 0;
+			train_cnt = 0;
+			fallback_cnt = 0;
+			return_fb = 0;
+			return_rg = 0;
+			xil_printf("parameter initialized\r\n");
+			xil_printf("=========================================================\r\n");
 
 			NVME_STATUS_REG nvmeReg;
 			nvmeReg.dword = IO_READ32(NVME_STATUS_REG_ADDR);
@@ -156,6 +194,7 @@ void nvme_main()
 
 				//flush grown bad block info
 				UpdateBadBlockTableForGrownBadBlock(RESERVED_DATA_BUFFER_BASE_ADDR);
+
 				xil_printf("\r\nNVMe shutdown!!!\r\n");
 			}
 		}
@@ -203,6 +242,23 @@ void nvme_main()
 		{
 			CheckDoneNvmeDmaReq();
 			SchedulingNandReq();
+		}
+
+		if (trim_perf == 1)
+		{
+			for (int i = 0; i < dsmCount; i++)
+				PerformDeallocation(reqPoolPtr->dsmReqList[i]);
+			dsmCount = 0;
+			trim_perf = 0;
+		}
+		if(do_trim_flag != 0)
+		{
+			time_cnt++;
+			if (time_cnt > 2000000)
+			{
+				time_cnt = 0;
+				handle_asyncTrim(0,0);
+			}
 		}
 	}
 }

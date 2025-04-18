@@ -178,6 +178,8 @@ typedef struct _NVME_CMD_FIFO_REG
 	};
 } NVME_CMD_FIFO_REG;
 
+NVME_CMD_FIFO_REG global_nvmeReg;
+
 //offset: 0x00000304, size: 8
 typedef struct _NVME_CPL_FIFO_REG
 {
@@ -339,6 +341,8 @@ void set_nvme_csts_shst(unsigned int shst);
 void set_nvme_admin_queue(unsigned int sqValid, unsigned int cqValid, unsigned int cqIrqEn);
 
 unsigned int get_nvme_cmd(unsigned short *qID, unsigned short *cmdSlotTag, unsigned int *cmdSeqNum, unsigned int *cmdDword);
+
+unsigned int check_nvme_cmd_come();
 
 void set_auto_nvme_cpl(unsigned int cmdSlotTag, unsigned int specific, unsigned int statusFieldWord);
 

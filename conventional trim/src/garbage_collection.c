@@ -48,6 +48,7 @@
 #include "xil_printf.h"
 #include <assert.h>
 #include "memory_map.h"
+#include "nvme/nvme_io_cmd.h"
 
 P_GC_VICTIM_MAP gcVictimMapPtr;
 
@@ -70,47 +71,59 @@ void InitGcVictimMap()
 
 void GarbageCollection(unsigned int dieNo)
 {
+	gc_cnt++;
+	tcheck = 0;
 	static XTime tStart, tEnd;
-	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, og_valid_page, new_valid_page;
-
-	gc_cnt += 1;
+	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, valid_page, predicted_valid;
+	unsigned int utilization =
+			100 * (((real_write_cnt) * 16) / 1024) /
+		    		(storageCapacity_L / ((1024 * 1024) / BYTES_PER_NVME_BLOCK));
 
 	victimBlockNo = GetFromGcVictimListNum(dieNo);
-	dieNoForGcCopy = dieNo;
+	valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
+	add_sample(utilization, valid_page);
 
-	og_valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
-	gc_copy += og_valid_page;
-
-	if(og_valid_page > 32)
+	if(do_trim_flag != 0)
 	{
-		if (gc_cnt >= start_point)
+		if (train_init == 0)
+			reg_model.fallback_value = valid_page;
+		predicted_valid = predict_valid_page(utilization);
+
+		if (((predicted_valid > valid_page) && (((predicted_valid - valid_page)) > 5)) ||
+				((valid_page > predicted_valid) && (((valid_page - predicted_valid)) > 5)))
 		{
-			XTime_GetTime(&tStart);
-			ForcedTRIM(gc_trim_cnt);
-			XTime_GetTime(&tEnd);
-			gc_trim_f = 1;
-//			start_point += thres;
+			if (train_thres_check == 1)
+				train_thres += 1;
+
+			train_thres_check = 1;
+			if (train_thres > 1)
+			{
+				train_model();
+				tcheck = 1;
+				train_thres = 0;
+				train_thres_check = 0;
+			}
+		} else
+		{
+			train_thres = 0;
+			train_thres_check = 0;
 		}
+
+		if (tcheck == 1)
+			predicted_valid = predict_valid_page(utilization);
+
+		if((valid_page != 0) && (predicted_valid != 0))
+			handle_asyncTrim(1, predicted_valid);
 	}
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
-	new_valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
-//	rd_gc_copy += new_valid_page;
-
-	if (og_valid_page > new_valid_page) {
-		gc_trim_cnt++;
-		xil_printf("TRIM OVERHEAD: %u MB\r\n", (32768 * gc_trim_cnt * 4) / 1024);
-		print_clock_cycles(tStart, tEnd);
-	}
-
-	XTime_GetTime(&tStart);
+	dieNoForGcCopy = dieNo;
 	if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt != SLICES_PER_BLOCK)
 	{
 		for(pageNo=0 ; pageNo<USER_PAGES_PER_BLOCK ; pageNo++)
 		{
 			virtualSliceAddr = Vorg2VsaTranslation(dieNo, victimBlockNo, pageNo);
 			logicalSliceAddr = virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr;
-
 			if(logicalSliceAddr != LSA_NONE)
 				if(logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr ==  virtualSliceAddr) //valid data
 				{
@@ -131,6 +144,7 @@ void GarbageCollection(unsigned int dieNo)
 					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = virtualSliceAddr;
 
 					SelectLowLevelReqQ(reqSlotTag);
+					SyncAllLowLevelReqDone();
 
 					//write
 					reqSlotTag = GetFromFreeReqQ();
@@ -152,85 +166,17 @@ void GarbageCollection(unsigned int dieNo)
 					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
 
 					SelectLowLevelReqQ(reqSlotTag);
+					SyncAllLowLevelReqDone();
+					gc_page_copy++;
 				}
 		}
 	}
 
 	EraseBlock(dieNo, victimBlockNo);
 	SyncAllLowLevelReqDone();
-
-	XTime_GetTime(&tEnd);
-
-	if (og_valid_page > new_valid_page) {
-		xil_printf("GC OVERHEAD\r\n");
-		xil_printf("og_valid_page: %u\t\t\t", og_valid_page);
-		xil_printf("new valid page: %u\n", new_valid_page);
-		print_clock_cycles(tStart, tEnd);
-	}
+	train_init = 1;
 }
 
-//void T_GC(unsigned int dieNo)
-//{
-//	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag;
-//
-//	victimBlockNo = GetFromGcVictimList(dieNo);
-//	dieNoForGcCopy = dieNo;
-//
-//	if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt != SLICES_PER_BLOCK)
-//	{
-//		for(pageNo=0 ; pageNo<USER_PAGES_PER_BLOCK ; pageNo++)
-//		{
-//			virtualSliceAddr = Vorg2VsaTranslation(dieNo, victimBlockNo, pageNo);
-//			logicalSliceAddr = virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr;
-//
-//			if(logicalSliceAddr != LSA_NONE)
-//				if(logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr ==  virtualSliceAddr) //valid data
-//				{
-//					//read
-//					reqSlotTag = GetFromFreeReqQ();
-//
-//					reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_NAND;
-//					reqPoolPtr->reqPool[reqSlotTag].reqCode = REQ_CODE_READ;
-//					reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = logicalSliceAddr;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_TEMP_ENTRY;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandAddr = REQ_OPT_NAND_ADDR_VSA;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEcc = REQ_OPT_NAND_ECC_ON;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEccWarning = REQ_OPT_NAND_ECC_WARNING_OFF;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_CHECK;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
-//					reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry = AllocateTempDataBuf(dieNo);
-//					UpdateTempDataBufEntryInfoBlockingReq(reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry, reqSlotTag);
-//					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = virtualSliceAddr;
-//
-//					SelectLowLevelReqQ(reqSlotTag);
-//
-//					//write
-//					reqSlotTag = GetFromFreeReqQ();
-//
-//					reqPoolPtr->reqPool[reqSlotTag].reqType = REQ_TYPE_NAND;
-//					reqPoolPtr->reqPool[reqSlotTag].reqCode = REQ_CODE_WRITE;
-//					reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = logicalSliceAddr;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat = REQ_OPT_DATA_BUF_TEMP_ENTRY;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandAddr = REQ_OPT_NAND_ADDR_VSA;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEcc = REQ_OPT_NAND_ECC_ON;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEccWarning = REQ_OPT_NAND_ECC_WARNING_OFF;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.rowAddrDependencyCheck = REQ_OPT_ROW_ADDR_DEPENDENCY_CHECK;
-//					reqPoolPtr->reqPool[reqSlotTag].reqOpt.blockSpace = REQ_OPT_BLOCK_SPACE_MAIN;
-//					reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry = AllocateTempDataBuf(dieNo);
-//					UpdateTempDataBufEntryInfoBlockingReq(reqPoolPtr->reqPool[reqSlotTag].dataBufInfo.entry, reqSlotTag);
-//					reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr = FindFreeVirtualSliceForGc(dieNoForGcCopy, victimBlockNo);
-//
-//					logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr;
-//					virtualSliceMapPtr->virtualSlice[reqPoolPtr->reqPool[reqSlotTag].nandInfo.virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
-//
-//					SelectLowLevelReqQ(reqSlotTag);
-//				}
-//		}
-//	}
-//
-//	EraseBlock(dieNo, victimBlockNo);
-//	SyncAllLowLevelReqDone();
-//}
 
 void PutToGcVictimList(unsigned int dieNo, unsigned int blockNo, unsigned int invalidSliceCnt)
 {

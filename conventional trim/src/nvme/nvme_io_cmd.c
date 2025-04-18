@@ -58,6 +58,7 @@
 #include "host_lld.h"
 #include "nvme_io_cmd.h"
 
+#include "../data_buffer.h"
 #include "../ftl_config.h"
 #include "../request_transform.h"
 
@@ -74,13 +75,9 @@ void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND 
 	ad = dsmInfo11.AD;
 
 	if (ad==1)
-	{
 		ReqTransNvmeToSliceForDSM(cmdSlotTag, nr);
-	}
 	else
-	{
 		xil_printf("No Discard\r\n");
-	}
 }
 
 void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
@@ -98,6 +95,33 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 	startLba[0] = nvmeIOCmd->dword[10];
 	startLba[1] = nvmeIOCmd->dword[11];
 	nlb = readInfo12.NLB;
+
+	if ((nlb == 77) && (startLba[0] == 77))
+	{
+		xil_printf("=========================================================\r\n");
+		xil_printf("parameter information\r\n");
+		xil_printf("write_cnt: %u, gc_cnt: %u, gc copy cnt: %u\n", write_cnt, gc_cnt, gc_page_copy);
+		xil_printf("requested trim cnt: %u, performed trim cnt: %u, ERR cnt: %u\n", trim_cnt, async_trim_cnt, err);
+		xil_printf("regression train cnt: %u, fallback train cnt: %u\n", train_cnt, fallback_cnt);
+		xil_printf("regression return cnt: %u, fallback return cnt: %u\n", return_rg, return_fb);
+
+		unsigned int util=
+				100 * (((real_write_cnt) * 16) / 1024) /
+				(storageCapacity_L / ((1024 * 1024) / BYTES_PER_NVME_BLOCK));
+
+		xil_printf("utilization: %d Percent\n", util);
+		write_cnt = 0;
+		trim_cnt = 0;
+		async_trim_cnt = 0;
+		gc_cnt = 0;
+		gc_page_copy = 0;
+		train_cnt = 0;
+		fallback_cnt = 0;
+		return_fb = 0;
+		return_rg = 0;
+		xil_printf("parameter initialized\r\n");
+		xil_printf("=========================================================\r\n");
+	}
 
 	ASSERT(startLba[0] < storageCapacity_L && (startLba[1] < STORAGE_CAPACITY_H || startLba[1] == 0));
 	//ASSERT(nlb < MAX_NUM_OF_NLB);
@@ -135,6 +159,212 @@ void handle_nvme_io_write(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 	ReqTransNvmeToSlice(cmdSlotTag, startLba[0], nlb, IO_NVM_WRITE);
 }
 
+
+void handle_asyncTrim(unsigned int forced, unsigned int Range)
+{
+    int blk0, blk1, blk2, blk3, tcheck;
+    tcheck = 0;
+    int tempSlba, tempNlb;
+    int nlb, slba, bufEntry, hashIndex;
+    unsigned int nextEntry;
+    unsigned int trimmedRange = 0;
+    // Range를 4000으로 곱해줌 (4KiB 단위가 아닌, 4000이 필요한 경우일 것)
+    Range = Range * 4000;
+
+    // 초기 bufEntry 설정
+    bufEntry = DATA_BUF_NONE;
+
+    // 해시테이블(인덱스 32부터 0까지)에서, 활성화된(Range_Flag == 1) 해시 엔트리를 찾음
+    for (int j = 32; j >= 0; j--)
+    {
+        if (dsmRangeHashTable->Range_Flag[j] == 1)
+        {
+            bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
+            hashIndex = j;
+            break;
+        }
+    }
+
+    while (bufEntry != DATA_BUF_NONE)
+    {
+        async_trim_cnt++;
+
+        slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
+        nlb  = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
+        nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
+        blk0 = blk1 = blk2 = blk3 = 1;
+
+        if ((nlb > 0) &&
+            (slba >= 0) &&
+            (nlb < (SLICES_PER_SSD * 4)) &&
+            (slba < (SLICES_PER_SSD * 4)))
+        {
+            int partialTrimCount = 0;
+            switch (slba % 4)
+            {
+                case 0:
+                    if (nlb == 1) {
+                        blk0 = 0;
+                        partialTrimCount = 1;
+                    }
+                    else if (nlb == 2) {
+                        blk0 = 0;
+                        blk1 = 0;
+                        partialTrimCount = 2;
+                    }
+                    else if (nlb == 3) {
+                        blk0 = 0;
+                        blk1 = 0;
+                        blk2 = 0;
+                        partialTrimCount = 3;
+                    }
+                    else {
+                        blk0 = 0;
+                        blk1 = 0;
+                        blk2 = 0;
+                        blk3 = 0;
+                        partialTrimCount = 4;
+                    }
+                    break;
+
+                case 1:
+                    if (nlb == 1) {
+                        blk1 = 0;
+                        partialTrimCount = 1;
+                    }
+                    else if (nlb == 2) {
+                        blk1 = 0;
+                        blk2 = 0;
+                        partialTrimCount = 2;
+                    }
+                    else {
+                        blk1 = 0;
+                        blk2 = 0;
+                        blk3 = 0;
+                        partialTrimCount = 3;
+                    }
+                    break;
+
+                case 2:
+                    if (nlb == 1) {
+                        blk2 = 0;
+                        partialTrimCount = 1;
+                    }
+                    else {
+                        blk2 = 0;
+                        blk3 = 0;
+                        partialTrimCount = 2;
+                    }
+                    break;
+
+                case 3:
+                    blk3 = 0;      // nlb >= 1이면 blk3 한 개만 해제
+                    partialTrimCount = 1;
+                    break;
+            }
+            trimmedRange += partialTrimCount;
+            TRIM(slba, blk0, blk1, blk2, blk3);
+            tcheck = 1;
+            tempSlba = slba + (4 - (slba % 4));
+            tempNlb  = nlb  - (4 - (slba % 4));
+            slba     = tempSlba;
+            nlb      = tempNlb;
+
+            while (nlb > 4)
+            {
+                TRIM(slba, 0, 0, 0, 0);
+                tcheck = 1;
+                trimmedRange += 4;
+                slba += 4;
+                nlb  -= 4;
+
+                if ((forced == 1) && (trimmedRange > Range))
+                {
+                    trimmedRange = 0;
+                    dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
+                    dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
+                    return;
+                }
+
+                if (forced == 0)
+                {
+                    cmd_by_trim = check_nvme_cmd_come();
+                    if (cmd_by_trim == 1)
+                        return;
+                }
+            }
+
+            blk0 = blk1 = blk2 = blk3 = 1;
+            switch (nlb)
+            {
+                case 1:
+                    blk0 = 0;
+                    break;
+
+                case 2:
+                    blk0 = 0;
+                    blk1 = 0;
+                    break;
+
+                case 3:
+                    blk0 = 0;
+                    blk1 = 0;
+                    blk2 = 0;
+                    break;
+
+                case 4:
+                    blk0 = 0;
+                    blk1 = 0;
+                    blk2 = 0;
+                    blk3 = 0;
+                    break;
+            }
+            if (nlb > 0)
+            {
+                TRIM(slba, blk0, blk1, blk2, blk3);
+				tcheck = 1;
+            }
+        }
+        SelectiveGetFromDsmRangeHashList(bufEntry);
+
+        if ((hashIndex == 0) &&
+            (dsmRangeHashTable->dsmRangeHash[hashIndex].headEntry == DATA_BUF_NONE))
+        {
+            bufEntry = DATA_BUF_NONE;
+        }
+        else
+        {
+            if (nextEntry == DATA_BUF_NONE)
+            {
+                for (int j = hashIndex; j >= 0; j--)
+                {
+                    if (dsmRangeHashTable->Range_Flag[j] == 1)
+                    {
+                        bufEntry  = dsmRangeHashTable->dsmRangeHash[j].headEntry;
+                        hashIndex = j;
+                        break;
+                    }
+                    bufEntry = DATA_BUF_NONE;
+                }
+            }
+            else
+            {
+                bufEntry = nextEntry;
+            }
+        }
+    }
+
+    do_trim_flag = 0;
+
+    if (tcheck == 1)
+    {
+    	for (int i = 0; i < BITMAP_SIZE; i++)
+    		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
+    }
+}
+
+
+
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 {
 	NVME_IO_COMMAND *nvmeIOCmd;
@@ -148,14 +378,13 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 			xil_printf("dword11 = 0x%X\r\n", nvmeIOCmd->dword11);
 			xil_printf("dword12 = 0x%X\r\n", nvmeIOCmd->dword12);*/
 
-
 	opc = (unsigned int)nvmeIOCmd->OPC;
 
 	switch(opc)
 	{
 		case IO_NVM_FLUSH:
 		{
-//			xil_printf("IO Flush Command\r\n");
+		//	xil_printf("IO Flush Command\r\n");
 			nvmeCPL.dword[0] = 0;
 			nvmeCPL.specific = 0x0;
 			set_auto_nvme_cpl(nvmeCmd->cmdSlotTag, nvmeCPL.specific, nvmeCPL.statusFieldWord);
@@ -195,4 +424,3 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 		}
 	}
 }
-

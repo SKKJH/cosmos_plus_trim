@@ -89,7 +89,7 @@ void ReqTransNvmeToSliceForDSM(unsigned int cmdSlotTag, unsigned int nr)
 	{
 		reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = LSA_DSM;
 		trim_LSA = LSA_DSM - 1;
-		trim_flag = 1;
+		trim_flag += 1;
 	}
 	else
 	{
@@ -106,7 +106,9 @@ void ReqTransNvmeToSliceForDSM(unsigned int cmdSlotTag, unsigned int nr)
 
 void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigned int nlb, unsigned int cmdCode)
 {
-	unsigned int reqSlotTag, requestedNvmeBlock, tempNumOfNvmeBlock, transCounter, tempLsa, loop, nvmeBlockOffset, nvmeDmaStartIndex, reqCode;
+	unsigned int reqSlotTag, requestedNvmeBlock, tempNumOfNvmeBlock, transCounter, tempLsa, loop, nvmeBlockOffset, nvmeDmaStartIndex, reqCode, slsa, elsa;
+	int start_index, end_index;
+	unsigned long long start_mask, end_mask;
 
 	requestedNvmeBlock = nlb + 1;
 	transCounter = 0;
@@ -114,8 +116,33 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 	tempLsa = startLba / NVME_BLOCKS_PER_SLICE;
 	loop = ((startLba % NVME_BLOCKS_PER_SLICE) + requestedNvmeBlock) / NVME_BLOCKS_PER_SLICE;
 
-	if(cmdCode == IO_NVM_WRITE)
+	if(cmdCode == IO_NVM_WRITE) {
 		reqCode = REQ_CODE_WRITE;
+		if (trim_flag != 0)
+		{
+			slsa = startLba/4;
+			elsa = (startLba + nlb - 1)/4;
+			start_index = slsa/64;
+			end_index = elsa/64;
+
+			start_mask = ~0ULL << (slsa % 64);
+			end_mask = ~0ULL >> (64 - ((elsa % 64)+1));
+
+			if (start_index == end_index)
+			{
+				asyncTrimBitMapPtr->writeBitMap[start_index] |= (start_mask & end_mask);
+			}
+			else
+			{
+				asyncTrimBitMapPtr->writeBitMap[start_index] |= start_mask;
+				asyncTrimBitMapPtr->writeBitMap[end_index] |= end_mask;
+				for (int i = start_index + 1; i < end_index; i++)
+				{
+					asyncTrimBitMapPtr->writeBitMap[i] = ~0ULL;
+				}
+			}
+		}
+	}
 	else if(cmdCode == IO_NVM_READ)
 		reqCode = REQ_CODE_READ;
 	else
@@ -768,8 +795,15 @@ void CheckDoneNvmeDmaReq()
 				SelectiveGetFromNvmeDmaReqQ(reqSlotTag);
 		}
 
+		if (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM)
+		{
+			reqPoolPtr->dsmReqList[dsmCount++] = reqSlotTag;
+			trim_perf = 1;
+		}
+
 		reqSlotTag = prevReq;
 	}
+
 }
 
 

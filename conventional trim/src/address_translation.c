@@ -48,6 +48,7 @@
 #include <assert.h>
 #include "memory_map.h"
 #include "xil_printf.h"
+#include "nvme/nvme_io_cmd.h"
 
 P_LOGICAL_SLICE_MAP logicalSliceMapPtr;
 P_VIRTUAL_SLICE_MAP virtualSliceMapPtr;
@@ -659,6 +660,7 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 
 	if(logicalSliceAddr < SLICES_PER_SSD)
 	{
+		real_write_cnt++;
 		InvalidateOldVsa(logicalSliceAddr);
 
 		virtualSliceAddr = FindFreeVirtualSlice();
@@ -668,7 +670,6 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk1 = blk1;
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk2 = blk2;
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].blk3 = blk3;
-//		xil_printf("Flushed LogicalSliceAddr: %u\r\n", logicalSliceAddr);
 
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].logicalSliceAddr = logicalSliceAddr;
 		virtualSliceMapPtr->virtualSlice[virtualSliceAddr].blk0 = blk0;
@@ -685,8 +686,7 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 
 unsigned int FindFreeVirtualSlice()
 {
-	unsigned int currentBlock, virtualSliceAddr, dieNo;
-//	static XTime tStart, tEnd;
+	unsigned int currentBlock, virtualSliceAddr, dieNo, victimBlockNo;
 
 	dieNo = sliceAllocationTargetDie;
 	currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
@@ -699,16 +699,7 @@ unsigned int FindFreeVirtualSlice()
 			virtualDieMapPtr->die[dieNo].currentBlock = currentBlock;
 		else
 		{
-//			XTime_GetTime(&tStart);
 			GarbageCollection(dieNo);
-//			XTime_GetTime(&tEnd);
-//			ov_cnt += (tEnd - tStart);
-//			if (gc_trim_f == 1)
-//			{
-//				gc_trim_f = 0;
-//				xil_printf("GC TRIM CALLED\r\n");
-//			}
-//			print_clock_cycles(tStart, tEnd);
 
 			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
 			if(virtualBlockMapPtr->block[dieNo][currentBlock].currentPage == USER_PAGES_PER_BLOCK)
@@ -807,6 +798,7 @@ void InvalidateOldVsa(unsigned int logicalSliceAddr)
 		logicalSliceMapPtr->logicalSlice[logicalSliceAddr].virtualSliceAddr = VSA_NONE;
 
 		PutToGcVictimList(dieNo, blockNo, virtualBlockMapPtr->block[dieNo][blockNo].invalidSliceCnt);
+		real_write_cnt--;
 	}
 
 }

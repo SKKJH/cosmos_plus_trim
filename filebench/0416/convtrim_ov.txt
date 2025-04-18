@@ -1,0 +1,294 @@
+=========================================================
+parameter information
+write_cnt: 1398, gc_cnt: 0, gc copy cnt: 0
+requested trim cnt: 0, performed block cnt: 0, ERR cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+Perfom Dealloc total_us: 2067
+utilization: 0 Percent
+parameter initialized
+=========================================================
+Perfom Dealloc total_us: 0, 12556427
+Total Dealloc total_us: 12556427
+Perfom Dealloc total_us: 0, 14736624
+Total Dealloc total_us: 27293051
+Perfom Dealloc total_us: 0, 1819
+Total Dealloc total_us: 27294870
+Perfom Dealloc total_us: 0, 13405084
+Total Dealloc total_us: 40699954
+Perfom Dealloc total_us: 0, 17675283
+Total Dealloc total_us: 58375237
+Perfom Dealloc total_us: 0, 10125016
+Total Dealloc total_us: 68500253
+Perfom Dealloc total_us: 0, 48514
+Total Dealloc total_us: 68548767
+Perfom Dealloc total_us: 0, 1206
+Total Dealloc total_us: 68549973
+Perfom Dealloc total_us: 0, 584
+Total Dealloc total_us: 68550557
+Perfom Dealloc total_us: 0, 5016
+Total Dealloc total_us: 68555573
+Perfom Dealloc total_us: 0, 4859
+Total Dealloc total_us: 68560432
+Perfom Dealloc total_us: 0, 3563
+Total Dealloc total_us: 68563995
+Perfom Dealloc total_us: 0, 3789
+Total Dealloc total_us: 68567784
+Perfom Dealloc total_us: 0, 3562
+Total Dealloc total_us: 68571346
+Perfom Dealloc total_us: 0, 3543
+Total Dealloc total_us: 68574889
+Perfom Dealloc total_us: 0, 3375
+Total Dealloc total_us: 68578264
+Perfom Dealloc total_us: 0, 3329
+Total Dealloc total_us: 68581593
+Perfom Dealloc total_us: 0, 3823
+Total Dealloc total_us: 68585416
+Perfom Dealloc total_us: 0, 3527
+Total Dealloc total_us: 68588943
+Perfom Dealloc total_us: 0, 3458
+Total Dealloc total_us: 68592401
+Perfom Dealloc total_us: 0, 3301
+Total Dealloc total_us: 68595702
+Perfom Dealloc total_us: 0, 3682
+Total Dealloc total_us: 68599384
+Perfom Dealloc total_us: 0, 3809
+Total Dealloc total_us: 68603193
+Perfom Dealloc total_us: 0, 3388
+Total Dealloc total_us: 68606581
+Perfom Dealloc total_us: 0, 3311
+Total Dealloc total_us: 68609892
+Perfom Dealloc total_us: 0, 3498
+Total Dealloc total_us: 68613390
+Perfom Dealloc total_us: 0, 3637
+Total Dealloc total_us: 68617027
+Perfom Dealloc total_us: 0, 3702
+Total Dealloc total_us: 68620729
+Perfom Dealloc total_us: 0, 3386
+Total Dealloc total_us: 68624115
+Perfom Dealloc total_us: 0, 3321
+Total Dealloc total_us: 68627436
+Perfom Dealloc total_us: 0, 3541
+Total Dealloc total_us: 68630977
+Perfom Dealloc total_us: 0, 3798
+Total Dealloc total_us: 68634775
+Perfom Dealloc total_us: 0, 3959
+Total Dealloc total_us: 68638734
+Perfom Dealloc total_us: 0, 3889
+Total Dealloc total_us: 68642623
+Perfom Dealloc total_us: 0, 4064
+Total Dealloc total_us: 68646687
+Perfom Dealloc total_us: 0, 3973
+Total Dealloc total_us: 68650660
+Perfom Dealloc total_us: 0, 3862
+Total Dealloc total_us: 68654522
+Perfom Dealloc total_us: 0, 4007
+Total Dealloc total_us: 68658529
+Perfom Dealloc total_us: 0, 4570
+Total Dealloc total_us: 68663099
+Perfom Dealloc total_us: 0, 4537
+Total Dealloc total_us: 68667636
+Perfom Dealloc total_us: 0, 3978
+Total Dealloc total_us: 68671614
+Perfom Dealloc total_us: 0, 3969
+Total Dealloc total_us: 68675583
+Perfom Dealloc total_us: 0, 4042
+Total Dealloc total_us: 68679625
+Perfom Dealloc total_us: 0, 3839
+Total Dealloc total_us: 68683464
+Perfom Dealloc total_us: 0, 3855
+Total Dealloc total_us: 68687319
+Perfom Dealloc total_us: 0, 3828
+Total Dealloc total_us: 68691147
+Perfom Dealloc total_us: 0, 4447
+Total Dealloc total_us: 68695594
+Perfom Dealloc total_us: 0, 4400
+Total Dealloc total_us: 68699994
+Perfom Dealloc total_us: 0, 3920
+Total Dealloc total_us: 68703914
+Perfom Dealloc total_us: 0, 4122
+Total Dealloc total_us: 68708036
+Perfom Dealloc total_us: 0, 4351
+Total Dealloc total_us: 68712387
+Perfom Dealloc total_us: 0, 4376
+Total Dealloc total_us: 68716763
+Perfom Dealloc total_us: 0, 1149
+Total Dealloc total_us: 68717912
+Perfom Dealloc total_us: 0, 17419638
+Total Dealloc total_us: 86137550
+Perfom Dealloc total_us: 0, 19513072
+Total Dealloc total_us: 105650622
+Perfom Dealloc total_us: 0, 10922510
+Total Dealloc total_us: 116573132
+Perfom Dealloc total_us: 0, 38037
+Total Dealloc total_us: 116611169
+Perfom Dealloc total_us: 0, 1638
+Total Dealloc total_us: 116612807
+Perfom Dealloc total_us: 0, 3259
+Total Dealloc total_us: 116616066
+Perfom Dealloc total_us: 0, 2304
+Total Dealloc total_us: 116618370
+Perfom Dealloc total_us: 0, 2300
+Total Dealloc total_us: 116620670
+Perfom Dealloc total_us: 0, 4574
+Total Dealloc total_us: 116625244
+Perfom Dealloc total_us: 0, 4301
+Total Dealloc total_us: 116629545
+Perfom Dealloc total_us: 0, 4029
+Total Dealloc total_us: 116633574
+Perfom Dealloc total_us: 0, 3997
+Total Dealloc total_us: 116637571
+Perfom Dealloc total_us: 0, 4087
+Total Dealloc total_us: 116641658
+Perfom Dealloc total_us: 0, 4225
+Total Dealloc total_us: 116645883
+Perfom Dealloc total_us: 0, 3921
+Total Dealloc total_us: 116649804
+Perfom Dealloc total_us: 0, 4073
+Total Dealloc total_us: 116653877
+Perfom Dealloc total_us: 0, 3749
+Total Dealloc total_us: 116657626
+Perfom Dealloc total_us: 0, 3481
+Total Dealloc total_us: 116661107
+Perfom Dealloc total_us: 0, 3432
+Total Dealloc total_us: 116664539
+Perfom Dealloc total_us: 0, 3649
+Total Dealloc total_us: 116668188
+Perfom Dealloc total_us: 0, 3539
+Total Dealloc total_us: 116671727
+Perfom Dealloc total_us: 0, 3889
+Total Dealloc total_us: 116675616
+Perfom Dealloc total_us: 0, 3659
+Total Dealloc total_us: 116679275
+Perfom Dealloc total_us: 0, 4539
+Total Dealloc total_us: 116683814
+Perfom Dealloc total_us: 0, 3972
+Total Dealloc total_us: 116687786
+Perfom Dealloc total_us: 0, 4101
+Total Dealloc total_us: 116691887
+Perfom Dealloc total_us: 0, 3804
+Total Dealloc total_us: 116695691
+Perfom Dealloc total_us: 0, 3852
+Total Dealloc total_us: 116699543
+Perfom Dealloc total_us: 0, 3970
+Total Dealloc total_us: 116703513
+Perfom Dealloc total_us: 0, 4206
+Total Dealloc total_us: 116707719
+Perfom Dealloc total_us: 0, 4340
+Total Dealloc total_us: 116712059
+Perfom Dealloc total_us: 0, 4257
+Total Dealloc total_us: 116716316
+Perfom Dealloc total_us: 0, 4090
+Total Dealloc total_us: 116720406
+Perfom Dealloc total_us: 0, 4304
+Total Dealloc total_us: 116724710
+Perfom Dealloc total_us: 0, 4341
+Total Dealloc total_us: 116729051
+Perfom Dealloc total_us: 0, 4461
+Total Dealloc total_us: 116733512
+Perfom Dealloc total_us: 0, 4013
+Total Dealloc total_us: 116737525
+Perfom Dealloc total_us: 0, 3994
+Total Dealloc total_us: 116741519
+Perfom Dealloc total_us: 0, 3994
+Total Dealloc total_us: 116745513
+Perfom Dealloc total_us: 0, 3800
+Total Dealloc total_us: 116749313
+Perfom Dealloc total_us: 0, 3845
+Total Dealloc total_us: 116753158
+Perfom Dealloc total_us: 0, 4426
+Total Dealloc total_us: 116757584
+Perfom Dealloc total_us: 0, 4718
+Total Dealloc total_us: 116762302
+Perfom Dealloc total_us: 0, 4258
+Total Dealloc total_us: 116766560
+Perfom Dealloc total_us: 0, 3723
+Total Dealloc total_us: 116770283
+Perfom Dealloc total_us: 0, 4043
+Total Dealloc total_us: 116774326
+Perfom Dealloc total_us: 0, 3484
+Total Dealloc total_us: 116777810
+Perfom Dealloc total_us: 0, 3483
+Total Dealloc total_us: 116781293
+Perfom Dealloc total_us: 0, 3578
+Total Dealloc total_us: 116784871
+Perfom Dealloc total_us: 0, 3919
+Total Dealloc total_us: 116788790
+Perfom Dealloc total_us: 0, 3432
+Total Dealloc total_us: 116792222
+Perfom Dealloc total_us: 0, 3632
+Total Dealloc total_us: 116795854
+Perfom Dealloc total_us: 0, 4033
+Total Dealloc total_us: 116799887
+Perfom Dealloc total_us: 0, 3988
+Total Dealloc total_us: 116803875
+Perfom Dealloc total_us: 0, 3365
+Total Dealloc total_us: 116807240
+Perfom Dealloc total_us: 0, 3359
+Total Dealloc total_us: 116810599
+Perfom Dealloc total_us: 0, 3891
+Total Dealloc total_us: 116814490
+Perfom Dealloc total_us: 0, 3894
+Total Dealloc total_us: 116818384
+Perfom Dealloc total_us: 0, 3668
+Total Dealloc total_us: 116822052
+Perfom Dealloc total_us: 0, 3561
+Total Dealloc total_us: 116825613
+Perfom Dealloc total_us: 0, 3508
+Total Dealloc total_us: 116829121
+Perfom Dealloc total_us: 0, 3647
+Total Dealloc total_us: 116832768
+Perfom Dealloc total_us: 0, 3416
+Total Dealloc total_us: 116836184
+Perfom Dealloc total_us: 0, 12333520
+Total Dealloc total_us: 129169704
+Perfom Dealloc total_us: 0, 7723137
+Total Dealloc total_us: 136892841
+Perfom Dealloc total_us: 0, 9179145
+Total Dealloc total_us: 146071986
+Perfom Dealloc total_us: 0, 15420348
+Total Dealloc total_us: 161492334
+Perfom Dealloc total_us: 0, 3304470
+Total Dealloc total_us: 164796804
+Perfom Dealloc total_us: 0, 17304
+Total Dealloc total_us: 164814108
+Perfom Dealloc total_us: 0, 15482
+Total Dealloc total_us: 164829590
+Perfom Dealloc total_us: 0, 15774
+Total Dealloc total_us: 164845364
+Perfom Dealloc total_us: 0, 14656
+Total Dealloc total_us: 164860020
+Perfom Dealloc total_us: 0, 8372
+Total Dealloc total_us: 164868392
+Perfom Dealloc total_us: 0, 10328403
+Total Dealloc total_us: 175196795
+Perfom Dealloc total_us: 0, 11274367
+Total Dealloc total_us: 186471162
+Perfom Dealloc total_us: 0, 12309159
+Total Dealloc total_us: 198780321
+Perfom Dealloc total_us: 0, 11528868
+Total Dealloc total_us: 210309189
+Perfom Dealloc total_us: 0, 2628743
+Total Dealloc total_us: 212937932
+Perfom Dealloc total_us: 0, 17398
+Total Dealloc total_us: 212955330
+Perfom Dealloc total_us: 0, 15019
+Total Dealloc total_us: 212970349
+Perfom Dealloc total_us: 0, 2964
+Total Dealloc total_us: 212973313
+Perfom Dealloc total_us: 0, 1640
+Total Dealloc total_us: 212974953
+Perfom Dealloc total_us: 0, 634
+Total Dealloc total_us: 212975587
+Perfom Dealloc total_us: 0, 2491
+Total Dealloc total_us: 212978078
+=========================================================
+parameter information
+write_cnt: 953070, gc_cnt: 0, gc copy cnt: 0
+requested trim cnt: 954, performed block cnt: 2330225, ERR cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+Perfom Dealloc total_us: 212978078
+utilization: 39 Percent
+parameter initialized
+=========================================================

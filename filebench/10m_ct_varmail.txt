@@ -1,0 +1,17 @@
+parameter information
+write_cnt: 1311034, gc_cnt: 3630, gc copy cnt: 200822
+requested trim cnt: 0, performed block cnt: 0, ERR cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+utilization: 84 Percent
+parameter initialized
+=========================================================
+=========================================================
+parameter information
+write_cnt: 912938, gc_cnt: 20088, gc copy cnt: 1658545
+requested trim cnt: 54, performed block cnt: 35673, ERR cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+utilization: 98 Percent
+parameter initialized
+=========================================================

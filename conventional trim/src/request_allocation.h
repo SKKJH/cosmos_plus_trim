@@ -58,6 +58,7 @@
 typedef struct _REQ_POOL
 {
 	SSD_REQ_FORMAT reqPool[AVAILABLE_OUNTSTANDING_REQ_COUNT];
+	unsigned int dsmReqList[AVAILABLE_OUNTSTANDING_REQ_COUNT];
 } REQ_POOL, *P_REQ_POOL;
 
 void InitReqPool();
@@ -77,8 +78,6 @@ void SelectiveGetFromBlockedByRowAddrDepReqQ(unsigned int reqSlotTag, unsigned i
 void PutToNvmeDmaReqQ(unsigned int reqSlotTag);
 void SelectiveGetFromNvmeDmaReqQ(unsigned int regSlotTag);
 void PerformDeallocation(unsigned int reqSlotTag);
-void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3);
-void ForcedTRIM();
 
 void PutToNandReqQ(unsigned int reqSlotTag, unsigned chNo, unsigned wayNo);
 void GetFromNandReqQ(unsigned int chNo, unsigned int wayNo, unsigned int reqStatus, unsigned int reqCode);

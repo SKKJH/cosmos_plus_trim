@@ -48,9 +48,6 @@
 //   - First draft
 //////////////////////////////////////////////////////////////////////////////////
 
-#include <stdint.h>
-#include <stddef.h>
-
 #ifndef __NVME_H_
 #define __NVME_H_
 
@@ -803,12 +800,18 @@ typedef struct _DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES
 	unsigned int CommandAccessSize			:8;
 } DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES;
 
-typedef struct _DATASET_MANAGEMENT_RANGE
+typedef union _DSMRangeUnion
 {
-    DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES ContextAttributes;
-	unsigned int lengthInLogicalBlocks;
-	unsigned int startingLBA[2];
-} DATASET_MANAGEMENT_RANGE;
+	unsigned int value;
+	DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES contextAttributes;
+} DSMRangeUnion;
+
+//typedef struct _DATASET_MANAGEMENT_RANGE
+//{
+//    DATASET_MANAGEMENT_CONTEXT_ATTRIBUTES ContextAttributes;
+//	unsigned int lengthInLogicalBlocks;
+//	unsigned int startingLBA[2];
+//} DATASET_MANAGEMENT_RANGE;
 
 #pragma pack(pop)
 
@@ -852,15 +855,43 @@ typedef struct _NVME_STATUS
 	NVME_IO_CQ_STATUS ioCqInfo[MAX_NUM_OF_IO_CQ];
 } NVME_CONTEXT;
 
+/////////////////
+//Linear Regression
+typedef struct {
+    int a_fixed;
+    int b_fixed;
+    unsigned int fallback_value;
+    int valid;  // 1: 회귀 가능, 0: fallback 사용
+} RegressionModel;
+
+RegressionModel reg_model;
+unsigned int util_count[1001];
+/////////////////
+
 unsigned int trim_flag;
+unsigned int do_trim_flag;
 unsigned int trim_LSA;
-unsigned int gc_copy;
-unsigned int thres;
-int start_point;
-unsigned int huge_gc;
-unsigned int rd_gc_copy;
+unsigned int real_write_cnt;
+
+unsigned int gc_page_copy;
 unsigned int gc_cnt;
-unsigned int gc_trim_f;
-unsigned int gc_trim_cnt;
-uint64_t ov_cnt;
+unsigned int write_cnt;
+unsigned int trim_cnt;
+unsigned int async_trim_cnt;
+unsigned int err;
+
+unsigned int return_rg;
+unsigned int return_fb;
+
+int cmd_by_trim;
+int train_cnt;
+int fallback_cnt;
+int train_init;
+int dsmCount;
+int trim_perf;
+
+unsigned int train_thres_check;
+unsigned int train_thres;
+unsigned int tcheck;
+
 #endif	//__NVME_H_

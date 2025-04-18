@@ -1,0 +1,23 @@
+nlb: 1048575, slba: 1048575
+nlb: 1048575, slba: 0
+nlb: 1048575, slba: 2097150
+nlb: 625155, slba: 3145725
+nlb: 0, slba: 0
+=========================================================
+parameter information
+write_cnt: 1311034, gc_cnt: 3630, gc copy cnt: 200822
+requested trim cnt: 0, performed block cnt: 0, ERR cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+utilization: 84 Percent
+parameter initialized
+=========================================================
+=========================================================
+parameter information
+write_cnt: 937219, gc_cnt: 20828, gc copy cnt: 1728949
+requested trim cnt: 37, performed block cnt: 25760, ERR cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+utilization: 98 Percent
+parameter initialized
+=========================================================
