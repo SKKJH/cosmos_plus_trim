@@ -32,4 +32,4 @@ nvme read /dev/nvme0n1 -c 77 -s 77 -z 4096
 sudo mkfs.ext4 -E discard /dev/nvme0n1
 
 
-400,000 Cycles
+watch -n5 'ps -o pid,stat,%cpu,%mem,etime,cmd -C filebench'
