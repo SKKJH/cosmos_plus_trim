@@ -106,11 +106,6 @@ void ReqTransNvmeToSliceForDSM(unsigned int cmdSlotTag, unsigned int nr)
 
 void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigned int nlb, unsigned int cmdCode)
 {
-	XTime tStart, tEnd;
-	XTime tTime;
-    unsigned int xtime_hi;
-    unsigned int xtime_lo;
-
 	unsigned int reqSlotTag, requestedNvmeBlock, tempNumOfNvmeBlock, transCounter, tempLsa, loop, nvmeBlockOffset, nvmeDmaStartIndex, reqCode, slsa, elsa;
 	int start_index, end_index;
 	unsigned long long start_mask, end_mask;
@@ -125,8 +120,6 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 		reqCode = REQ_CODE_WRITE;
 		if (trim_flag != 0)
 		{
-			XTime_GetTime(&tStart);
-
 			slsa = startLba/4;
 			elsa = (startLba + nlb - 1)/4;
 			start_index = slsa/64;
@@ -148,12 +141,6 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 					asyncTrimBitMapPtr->writeBitMap[i] = ~0ULL;
 				}
 			}
-
-			XTime_GetTime(&tEnd);
-			tTime = (tEnd - tStart);
-			xtime_hi = (unsigned int)(tTime >> 32);
-			xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
-			total_write_us += xtime_lo;
 		}
 	}
 	else if(cmdCode == IO_NVM_READ)
@@ -425,8 +412,6 @@ void ReqTransSliceToLowLevel()
 			dataBufMapPtr->dataBuf[dataBufEntry].blk1 = reqPoolPtr->reqPool[reqSlotTag].blk1;
 			dataBufMapPtr->dataBuf[dataBufEntry].blk2 = reqPoolPtr->reqPool[reqSlotTag].blk2;
 			dataBufMapPtr->dataBuf[dataBufEntry].blk3 = reqPoolPtr->reqPool[reqSlotTag].blk3;
-//			if (trim_flag != 0)
-//				logicalSliceMapPtr->logicalSlice[dataBufMapPtr->dataBuf[dataBufEntry].logicalSliceAddr].Trim_Write = 1;
 
 			reqPoolPtr->reqPool[reqSlotTag].reqCode = REQ_CODE_RxDMA;
 		}
@@ -808,6 +793,12 @@ void CheckDoneNvmeDmaReq()
 
 			if(txDone)
 				SelectiveGetFromNvmeDmaReqQ(reqSlotTag);
+		}
+
+		if (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM)
+		{
+			reqPoolPtr->dsmReqList[dsmCount++] = reqSlotTag;
+			trim_perf = 1;
 		}
 
 		reqSlotTag = prevReq;

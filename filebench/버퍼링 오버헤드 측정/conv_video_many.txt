@@ -1,0 +1,22 @@
+=========================================================
+parameter information
+write_cnt: 5850, gc_cnt: 0, gc copy cnt: 0
+requested trim cnt: 0, async performed block cnt: 0, sync performed block cnt: 0, real trimmed block: 0, err cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+utilization: 0 Percent, allocate_full_cnt: 0, async_trim_buf: 0, sync_trim_buf: 0
+parameter initialized
+idle trim cnt: 0, gc trim cnt: 0, done return: 0, force return: 0
+Perfom Dealloc total_us: 2648
+=========================================================
+=========================================================
+parameter information
+write_cnt: 3640057, gc_cnt: 0, gc copy cnt: 0
+requested trim cnt: 93, async performed block cnt: 0, sync performed block cnt: 15, real trimmed block: 4, err cnt: 0
+regression train cnt: 0, fallback train cnt: 0
+regression return cnt: 0, fallback return cnt: 0
+utilization: 96 Percent, allocate_full_cnt: 0, async_trim_buf: 77, sync_trim_buf: 16
+parameter initialized
+idle trim cnt: 0, gc trim cnt: 0, done return: 0, force return: 0
+Perfom Dealloc total_us: 111580
+=========================================================

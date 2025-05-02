@@ -56,7 +56,7 @@ P_TEMPORARY_DATA_BUF_MAP tempDataBufMapPtr;
 
 P_ASYNC_TRIM_BIT_MAP asyncTrimBitMapPtr;
 P_DSM_RANGE dsmRangePtr;
-//DSM_RANGE_LRU_LIST dsmRangeLruList;
+DSM_RANGE_LRU_LIST dsmRangeLruList;
 P_DSM_RANGE_HASH_TABLE dsmRangeHashTable;
 
 P_REG_BUF_MAP regressionBufMapPtr;
@@ -88,7 +88,6 @@ void InitDataBuf()
 
 		dsmRangePtr->dsmRange[i].hashPrevEntry = DATA_BUF_NONE;
 		dsmRangePtr->dsmRange[i].hashNextEntry = DATA_BUF_NONE;
-		dsmRangePtr->dsmRange[i].flag = 0;
 	}
 
 	for (int i = 0; i < 33; i++)
@@ -100,8 +99,8 @@ void InitDataBuf()
 
 	dsmRangePtr->dsmRange[0].prevEntry = DATA_BUF_NONE;
 	dsmRangePtr->dsmRange[AVAILABLE_DSM_RANGE_ENTRY_COUNT - 1].nextEntry = DATA_BUF_NONE;
-
-	dsmRangePtr->tailEntry = AVAILABLE_DSM_RANGE_ENTRY_COUNT - 1;
+	dsmRangeLruList.headEntry = 0 ;
+	dsmRangeLruList.tailEntry = AVAILABLE_DSM_RANGE_ENTRY_COUNT - 1;
 
 	for (int i = 0; i < BITMAP_SIZE; i++)
 		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
@@ -332,169 +331,145 @@ unsigned int CheckDataBufHitbyLSA(unsigned int logicalSliceAddr)
 	return DATA_BUF_FAIL;
 }
 
-unsigned int FindDsmRangeHashTableEntry(unsigned int length)
-{
-    unsigned int size_in_mb = (length * 4) / 1024;  // KB -> MB
-
-    if (size_in_mb <= 1)
-        return 0;
-    else if (size_in_mb >= 1024)
-        return 32;
-
-    unsigned int index = ((size_in_mb - 1) * 31) / (1024 - 1) + 1;
-
-    return index;
-}
-
-
-
 //unsigned int FindDsmRangeHashTableEntry(unsigned int length)
 //{
-//    if (length < 8192)
-//        return 0;
-//    else if (length < 16384)
-//        return 1;
-//    else if (length < 24576)
-//        return 2;
-//    else if (length < 32768)
-//        return 3;
-//    else if (length < 40960)
-//        return 4;
-//    else if (length < 49152)
-//        return 5;
-//    else if (length < 57344)
-//        return 6;
-//    else if (length < 65536)
-//        return 7;
-//    else if (length < 73728)
-//        return 8;
-//    else if (length < 81920)
-//        return 9;
-//    else if (length < 90112)
-//        return 10;
-//    else if (length < 98304)
-//        return 11;
-//    else if (length < 106496)
-//        return 12;
-//    else if (length < 114688)
-//        return 13;
-//    else if (length < 122880)
-//        return 14;
-//    else if (length < 131072)
-//        return 15;
-//    else if (length < 139264)
-//        return 16;
-//    else if (length < 147456)
-//        return 17;
-//    else if (length < 155648)
-//        return 18;
-//    else if (length < 163840)
-//        return 19;
-//    else if (length < 172032)
-//        return 20;
-//    else if (length < 180224)
-//        return 21;
-//    else if (length < 188416)
-//        return 22;
-//    else if (length < 196608)
-//        return 23;
-//    else if (length < 204800)
-//        return 24;
-//    else if (length < 212992)
-//        return 25;
-//    else if (length < 221184)
-//        return 26;
-//    else if (length < 229376)
-//        return 27;
-//    else if (length < 237568)
-//        return 28;
-//    else if (length < 245760)
-//        return 29;
-//    else if (length < 253952)
-//        return 30;
-//    else if (length < 262144)
-//        return 31;
-//    else
-//    	return 32;
+//	if ((1 <= length) && (length < 2))
+//		return 0;
+//	else if ((2 <= length) && (length < 4))
+//		return 1;
+//	else if ((4 <= length) && (length < 8))
+//		return 2;
+//	else if ((8 <= length) && (length < 16))
+//		return 3;
+//	else if ((16 <= length) && (length < 32))
+//		return 4;
+//	else if ((32 <= length) && (length < 64))
+//		return 5;
+//	else if ((64 <= length) && (length < 128))
+//		return 6;
+//	else if ((128 <= length) && (length < 256))
+//		return 7;
+//	else if ((256 <= length) && (length < 512))
+//		return 8;
+//	else if ((512 <= length) && (length < 1024))
+//		return 9;
+//	else if ((1024 <= length) && (length < 2048))
+//		return 10;
+//	else if ((2048 <= length) && (length < 4096))
+//		return 11;
+//	else if ((4096 <= length) && (length < 8192))
+//		return 12;
+//	else if ((8192 <= length) && (length < 16384))
+//		return 13;
+//	else if ((16384 <= length) && (length < 32768))
+//		return 14;
+//	else if ((32768 <= length) && (length < 65536))
+//		return 15;
+//	else if ((65536 <= length) && (length < 131072))
+//		return 16;
+//	else if ((131072 <= length) && (length < 262144))
+//		return 17;
+//	else if ((262144 <= length) && (length < 524288))
+//		return 18;
+//	else if ((524288 <= length) && (length < 1048576))
+//		return 19;
+//	else
+//		return 20;
 //}
 
-void DebugCheckHashListOrder(unsigned int hashEntry) {
-    unsigned int prevRealLB = 0xFFFFFFFF;
-    unsigned int entry = dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry;
-
-    xil_printf("Hash List [%u]: ", hashEntry);
-    while (entry != DATA_BUF_NONE) {
-        unsigned int realLB = dsmRangePtr->dsmRange[entry].RealLB;
-        xil_printf("%u -> ", realLB);
-
-        if (realLB > prevRealLB) {
-            xil_printf("\n[ERROR] List not sorted! prev: %u, current: %u\n", prevRealLB, realLB);
-        }
-
-        prevRealLB = realLB;
-        entry = dsmRangePtr->dsmRange[entry].hashNextEntry;
-    }
-    xil_printf("NULL\n");
+unsigned int FindDsmRangeHashTableEntry(unsigned int length)
+{
+    if (length < 8192)
+        return 0;
+    else if (length < 16384)
+        return 1;
+    else if (length < 24576)
+        return 2;
+    else if (length < 32768)
+        return 3;
+    else if (length < 40960)
+        return 4;
+    else if (length < 49152)
+        return 5;
+    else if (length < 57344)
+        return 6;
+    else if (length < 65536)
+        return 7;
+    else if (length < 73728)
+        return 8;
+    else if (length < 81920)
+        return 9;
+    else if (length < 90112)
+        return 10;
+    else if (length < 98304)
+        return 11;
+    else if (length < 106496)
+        return 12;
+    else if (length < 114688)
+        return 13;
+    else if (length < 122880)
+        return 14;
+    else if (length < 131072)
+        return 15;
+    else if (length < 139264)
+        return 16;
+    else if (length < 147456)
+        return 17;
+    else if (length < 155648)
+        return 18;
+    else if (length < 163840)
+        return 19;
+    else if (length < 172032)
+        return 20;
+    else if (length < 180224)
+        return 21;
+    else if (length < 188416)
+        return 22;
+    else if (length < 196608)
+        return 23;
+    else if (length < 204800)
+        return 24;
+    else if (length < 212992)
+        return 25;
+    else if (length < 221184)
+        return 26;
+    else if (length < 229376)
+        return 27;
+    else if (length < 237568)
+        return 28;
+    else if (length < 245760)
+        return 29;
+    else if (length < 253952)
+        return 30;
+    else if (length < 262144)
+        return 31;
+    else
+    	return 32;
 }
 
-void DebugCheckBidirectionalLink(unsigned int hashEntry) {
-    unsigned int entry = dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry;
-
-    while (entry != DATA_BUF_NONE) {
-        unsigned int next = dsmRangePtr->dsmRange[entry].hashNextEntry;
-        if (next != DATA_BUF_NONE) {
-            unsigned int back = dsmRangePtr->dsmRange[next].hashPrevEntry;
-            if (back != entry) {
-                xil_printf("[ERROR] Backward link mismatch: %u -> %u but back != %u\n", entry, next, entry);
-            }
-        }
-        entry = next;
-    }
-}
-
-void DebugCheckHeadTail(unsigned int hashEntry) {
-    unsigned int head = dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry;
-    unsigned int tail = dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry;
-
-    // tail에서 역방향으로 탐색해서 head까지 가야 함
-    unsigned int entry = tail;
-    while (entry != DATA_BUF_NONE) {
-        if (entry == head) {
-            xil_printf("Head/Tail linkage OK for hash %u\n", hashEntry);
-            return;
-        }
-        entry = dsmRangePtr->dsmRange[entry].hashPrevEntry;
-    }
-    xil_printf("[ERROR] Tail to Head traversal failed for hash %u\n", hashEntry);
-}
-
-void VerifyAllHashLists() {
-    for (int i = 0; i < 33; i++) {
-        DebugCheckHashListOrder(i);
-        DebugCheckBidirectionalLink(i);
-        DebugCheckHeadTail(i);
-    }
-}
 
 void PutToDsmRangeHashList(unsigned int bufEntry)
 {
 	unsigned int hashEntry, newLength, currentEntry, prevEntry;
 
 	newLength = dsmRangePtr->dsmRange[bufEntry].RealLB;
+
+	if (newLength == 0)
+		return;
+
 	hashEntry = FindDsmRangeHashTableEntry(newLength);
 
 	dsmRangeHashTable->Range_Flag[hashEntry] = 1;
 	currentEntry = dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry;
 	prevEntry = DATA_BUF_NONE;
 
-//	while (currentEntry != DATA_BUF_NONE)
-//	{
-//		if (dsmRangePtr->dsmRange[currentEntry].RealLB <= newLength) {
-//			break;
-//		}
-//		prevEntry = currentEntry;
-//		currentEntry = dsmRangePtr->dsmRange[currentEntry].hashNextEntry;
-//	}
+	while (currentEntry != DATA_BUF_NONE)
+	{
+		if (dsmRangePtr->dsmRange[currentEntry].RealLB <= newLength)
+			break;
+		prevEntry = currentEntry;
+		currentEntry = dsmRangePtr->dsmRange[currentEntry].hashNextEntry;
+	}
 
 	dsmRangePtr->dsmRange[bufEntry].hashPrevEntry = DATA_BUF_NONE;
 	dsmRangePtr->dsmRange[bufEntry].hashNextEntry = DATA_BUF_NONE;
@@ -504,12 +479,10 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 		dsmRangePtr->dsmRange[bufEntry].hashNextEntry = currentEntry;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry = bufEntry;
 
-		if (currentEntry != DATA_BUF_NONE) {
+		if (currentEntry != DATA_BUF_NONE)
 			dsmRangePtr->dsmRange[currentEntry].hashPrevEntry = bufEntry;
-		}
-		else {
+		else
 			dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = bufEntry;
-		}
 	}
 	else
 	{
@@ -517,46 +490,39 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 		dsmRangePtr->dsmRange[bufEntry].hashNextEntry = currentEntry;
 		dsmRangePtr->dsmRange[prevEntry].hashNextEntry = bufEntry;
 
-		if (currentEntry != DATA_BUF_NONE) {
+		if (currentEntry != DATA_BUF_NONE)
 			dsmRangePtr->dsmRange[currentEntry].hashPrevEntry = bufEntry;
-		}
-		else {
+		else
 			dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = bufEntry;
-		}
 	}
-//	DebugCheckHashListOrder(hashEntry);
 }
 
 void PutDSMBuftoLRUList(unsigned int bufEntry)
 {
-	if(dsmRangePtr->tailEntry != DATA_BUF_NONE)
+	if(dsmRangeLruList.tailEntry != DATA_BUF_NONE)
 	{
-//		xil_printf("8\n");
-		dsmRangePtr->dsmRange[bufEntry].prevEntry = dsmRangePtr->tailEntry;
+		dsmRangePtr->dsmRange[bufEntry].prevEntry = dsmRangeLruList.tailEntry;
 		dsmRangePtr->dsmRange[bufEntry].nextEntry = DATA_BUF_NONE;
-		dsmRangePtr->dsmRange[dsmRangePtr->tailEntry].nextEntry = bufEntry;
-		dsmRangePtr->tailEntry = bufEntry;
+		dsmRangePtr->dsmRange[dsmRangeLruList.tailEntry].nextEntry = bufEntry;
+		dsmRangeLruList.tailEntry = bufEntry;
 	}
 	else
 	{
-//		xil_printf("9\r\n");
 		dsmRangePtr->dsmRange[bufEntry].prevEntry = DATA_BUF_NONE;
 		dsmRangePtr->dsmRange[bufEntry].nextEntry = DATA_BUF_NONE;
-		dsmRangePtr->tailEntry = bufEntry;
+		dsmRangeLruList.headEntry = bufEntry;
+		dsmRangeLruList.tailEntry = bufEntry;
 	}
 }
 
 void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry)
 {
-//	xil_printf("1");
 	unsigned int prevBufEntry, nextBufEntry, hashEntry;
 	if (bufEntry == DATA_BUF_NONE)
 	{
-//		xil_printf("2");
 		xil_printf("Wrong BufEntry for SelectiveGet\r\n");
 		return;
 	}
-//	xil_printf("3");
 
 	prevBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashPrevEntry;
 	nextBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
@@ -565,25 +531,21 @@ void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry)
 
 	if((nextBufEntry != DATA_BUF_NONE) && (prevBufEntry != DATA_BUF_NONE))
 	{
-//		xil_printf("4");
 		dsmRangePtr->dsmRange[prevBufEntry].hashNextEntry = nextBufEntry;
 		dsmRangePtr->dsmRange[nextBufEntry].hashPrevEntry = prevBufEntry;
 	}
 	else if((nextBufEntry == DATA_BUF_NONE) && (prevBufEntry != DATA_BUF_NONE))
 	{
-//		xil_printf("5");
 		dsmRangePtr->dsmRange[prevBufEntry].hashNextEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = prevBufEntry;
 	}
 	else if((nextBufEntry != DATA_BUF_NONE) && (prevBufEntry == DATA_BUF_NONE))
 	{
-//		xil_printf("6");
 		dsmRangePtr->dsmRange[nextBufEntry].hashPrevEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry = nextBufEntry;
 	}
 	else
 	{
-//		xil_printf("7");
 		dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->Range_Flag[hashEntry] = 0;
@@ -597,93 +559,71 @@ void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry)
 
 unsigned int SmallestDSMBuftoLRUList()
 {
-    for (int i = 0; i < 21; i++)
-    {
-        unsigned int tmpEntry = dsmRangeHashTable->dsmRangeHash[i].tailEntry;
-        if (tmpEntry == DATA_BUF_NONE)
-            continue;
-
-//        xil_printf("tailEntry: %u\r\n", tmpEntry);
-        SelectiveGetFromDsmRangeHashList(tmpEntry);
-        return tmpEntry;
-
-//        unsigned int smallestEntry = tmpEntry;
-//        unsigned int smallest = dsmRangePtr->dsmRange[tmpEntry].RealLB;
-//
-//        tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
-
-//        while (tmpEntry != DATA_BUF_NONE)
-//        {
-//            unsigned int realLB = dsmRangePtr->dsmRange[tmpEntry].RealLB;
-//            if (realLB < smallest)
-//            {
-//                smallest = realLB;
-//                smallestEntry = tmpEntry;
-//            }
-//            tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
-//        }
-
-//        xil_printf("By SmallestDSMBuftoLRUList\r\n");
-//        SelectiveGetFromDsmRangeHashList(smallestEntry);
-//        return smallestEntry;
-    }
-
-    // 모든 버킷이 비어 있는 경우
-    assert(!"[WARNING] No valid DSM buffer entry found [WARNING]");
-    return DATA_BUF_NONE;
+	unsigned int smallest, smallestEntry, tmpEntry;
+	for (int i = 0; i < 21; i++)
+	{
+		tmpEntry = dsmRangeHashTable->dsmRangeHash[i].headEntry;
+		smallest = dsmRangePtr->dsmRange[tmpEntry].RealLB;
+		smallestEntry = tmpEntry;
+		while(tmpEntry != DATA_BUF_NONE)
+		{
+			if (smallest > dsmRangePtr->dsmRange[tmpEntry].RealLB)
+			{
+				smallest = dsmRangePtr->dsmRange[tmpEntry].RealLB;
+				smallestEntry = tmpEntry;
+				tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
+			}
+			else
+				tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
+		}
+	}
+	SelectiveGetFromDsmRangeHashList(smallestEntry);
+	return smallestEntry;
 }
-
-
 
 unsigned int AllocateDSMBuf()
 {
-	unsigned int allocEntry = dsmRangePtr->tailEntry;
+	unsigned int evictedEntry = dsmRangeLruList.tailEntry;
 
-	if(allocEntry == DATA_BUF_NONE) {
-//		xil_printf("allocEntry: %u\r\n", allocEntry);
-		allocate_full_cnt += 1;
-		allocEntry = SmallestDSMBuftoLRUList();
-	}
+	if(evictedEntry == DATA_BUF_NONE)
+		evictedEntry = SmallestDSMBuftoLRUList();
 
-	if(dsmRangePtr->dsmRange[allocEntry].prevEntry != DATA_BUF_NONE)
+	if(dsmRangePtr->dsmRange[evictedEntry].prevEntry != DATA_BUF_NONE)
 	{
-		dsmRangePtr->dsmRange[dsmRangePtr->dsmRange[allocEntry].prevEntry].nextEntry = DATA_BUF_NONE;
-		dsmRangePtr->tailEntry = dsmRangePtr->dsmRange[allocEntry].prevEntry;
-		dsmRangePtr->dsmRange[allocEntry].prevEntry = DATA_BUF_NONE;
-		dsmRangePtr->dsmRange[allocEntry].nextEntry = DATA_BUF_NONE;
+		dsmRangePtr->dsmRange[dsmRangePtr->dsmRange[evictedEntry].prevEntry].nextEntry = DATA_BUF_NONE;
+		dsmRangeLruList.tailEntry = dsmRangePtr->dsmRange[evictedEntry].prevEntry;
+
+		dsmRangePtr->dsmRange[evictedEntry].prevEntry = DATA_BUF_NONE;
+		dsmRangePtr->dsmRange[evictedEntry].nextEntry = DATA_BUF_NONE;
+
 	}
 	else
 	{
-//		xil_printf("FULL BUFFER\r\n");
-		dsmRangePtr->dsmRange[allocEntry].prevEntry = DATA_BUF_NONE;
-		dsmRangePtr->dsmRange[allocEntry].nextEntry = DATA_BUF_NONE;
-		dsmRangePtr->tailEntry = DATA_BUF_NONE;
+		dsmRangePtr->dsmRange[evictedEntry].prevEntry = DATA_BUF_NONE;
+		dsmRangePtr->dsmRange[evictedEntry].nextEntry = DATA_BUF_NONE;
+		dsmRangeLruList.headEntry = DATA_BUF_NONE;
+		dsmRangeLruList.tailEntry = DATA_BUF_NONE;
 	}
 
-	return allocEntry;
+	return evictedEntry;
 }
 
-void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check)
+void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3)
 {
 	unsigned int lsa, bufEntry;
 	lsa = lba/4;
 
-	if (check == 1)
-		if (asyncTrimBitMapPtr->writeBitMap[lsa/64] & (1ULL << (lsa % 64)))
-		{
-			trim_invalid += 1;
-			return;
-		}
+	if (asyncTrimBitMapPtr->writeBitMap[lsa/64] & (1ULL << (lsa % 64)))
+		return;
 
-//		if (logicalSliceMapPtr->logicalSlice[lsa].Trim_Write)
-//		{
-//			logicalSliceMapPtr->logicalSlice[lsa].Trim_Write = 0;
-//			return;
-//		}
+//	xil_printf("LSA %d will be checked\r\n",lsa);
+//	if ((blk0 == 0)&&(blk1 == 0)&&(blk2 == 0)&&(blk3 == 0))
+//		xil_printf("LSA %d will be trimmed\r\n", lsa);
 
 	bufEntry = CheckDataBufHitbyLSA(lsa);
 	if (bufEntry != DATA_BUF_FAIL)
 	{
+//    	xil_printf("This Buffer will be cleaned: %d!!\r\n", bufEntry);
         if (blk0 == 0)
         {
             dataBufMapPtr->dataBuf[bufEntry].blk0 = 0;
@@ -705,6 +645,7 @@ void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int 
             (dataBufMapPtr->dataBuf[bufEntry].blk2 == 0) &&
             (dataBufMapPtr->dataBuf[bufEntry].blk3 == 0))
         {
+//        	xil_printf("This Buffer cleaned: %d!!\r\n", bufEntry);
             unsigned int prevBufEntry, nextBufEntry;
             prevBufEntry = dataBufMapPtr->dataBuf[bufEntry].prevEntry;
             nextBufEntry = dataBufMapPtr->dataBuf[bufEntry].nextEntry;
@@ -738,6 +679,7 @@ void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int 
 	}
 	unsigned int virtualSliceAddr = logicalSliceMapPtr->logicalSlice[lsa].virtualSliceAddr;
 	if (virtualSliceAddr != VSA_NONE) {
+//    	xil_printf("This LSA will be cleaned: %d!!\r\n", lsa);
 		if (blk0 == 0) {
 			logicalSliceMapPtr->logicalSlice[lsa].blk0 = 0;
 		}
@@ -755,7 +697,7 @@ void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int 
 			(logicalSliceMapPtr->logicalSlice[lsa].blk2 == 0) &&
 	        (logicalSliceMapPtr->logicalSlice[lsa].blk3 == 0))
 		{
-			realtrimmedRange += 4;
+//        	xil_printf("This LSA cleaned: %d!!\r\n", lsa);
 			InvalidateOldVsa(lsa);
 		}
 	}
@@ -766,15 +708,21 @@ unsigned int cmp(const void *a, const void *b) {
 }
 
 void add_sample(unsigned int util, unsigned int valid_page) {
+    // 다음에 쓸 위치 = tail
     unsigned int index = regressionBufMapPtr->tail;
+
+    // 이전 util 값 제거 (버퍼가 가득 찼을 경우에만)
     if ((regressionBufMapPtr->tail + 1) % MAX_SAMPLES == regressionBufMapPtr->head) {
         int old_util = regressionBufMapPtr->regressionEnrty[regressionBufMapPtr->head].util;
-        util_count[old_util]--;
-        regressionBufMapPtr->head = (regressionBufMapPtr->head + 1) % MAX_SAMPLES;
+        util_count[old_util]--;  // 오래된 값 제거
+        regressionBufMapPtr->head = (regressionBufMapPtr->head + 1) % MAX_SAMPLES;  // head 이동
     }
+
+    // 새 값 삽입
     regressionBufMapPtr->regressionEnrty[index].util = util;
     regressionBufMapPtr->regressionEnrty[index].valid_page = valid_page;
-    regressionBufMapPtr->tail = (regressionBufMapPtr->tail + 1) % MAX_SAMPLES;
+
+    regressionBufMapPtr->tail = (regressionBufMapPtr->tail + 1) % MAX_SAMPLES;  // tail 이동
     util_count[util]++;
 }
 
@@ -830,17 +778,24 @@ void train_model() {
 
 unsigned int predict_valid_page(int util) {
     if (!reg_model.valid) {
+//        xil_printf(" 회귀 불가 또는 데이터 없음 → fallback 사용: valid_page = %d\n",
+//                   reg_model.fallback_value);
     	return_fb++;
         return reg_model.fallback_value;
     }
+
     int predicted = (reg_model.a_fixed * util + reg_model.b_fixed) / 1000;
+
     int a_int = reg_model.a_fixed / 1000;
     int a_frac = reg_model.a_fixed % 1000;
     if (a_frac < 0) a_frac = -a_frac;
+
     int b_int = reg_model.b_fixed / 1000;
     int b_frac = reg_model.b_fixed % 1000;
     if (b_frac < 0) b_frac = -b_frac;
 
+//    xil_printf(" 회귀 적용: y = (%d.%02d)x + (%d.%02d) → 예측값: %d\n",
+//               a_int, a_frac, b_int, b_frac, predicted);
     return_rg++;
     return predicted;
 }

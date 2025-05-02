@@ -87,7 +87,6 @@ void GarbageCollection(unsigned int dieNo)
 	{
 		if (train_init == 0)
 			reg_model.fallback_value = valid_page;
-
 		predicted_valid = predict_valid_page(utilization);
 
 		if (((predicted_valid > valid_page) && (((predicted_valid - valid_page)) > 5)) ||
@@ -113,7 +112,8 @@ void GarbageCollection(unsigned int dieNo)
 		if (tcheck == 1)
 			predicted_valid = predict_valid_page(utilization);
 
-		handle_asyncTrim(1, predicted_valid + 1);
+		if((valid_page != 0) && (predicted_valid != 0))
+			handle_asyncTrim(1, predicted_valid);
 	}
 
 	victimBlockNo = GetFromGcVictimList(dieNo);

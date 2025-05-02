@@ -64,7 +64,7 @@
 
 #define FindDataBufHashTableEntry(logicalSliceAddr) ((logicalSliceAddr) % AVAILABLE_DATA_BUFFER_ENTRY_COUNT)
 
-#define AVAILABLE_DSM_RANGE_ENTRY_COUNT					30000
+#define AVAILABLE_DSM_RANGE_ENTRY_COUNT					1024
 
 typedef struct _DATA_BUF_ENTRY {
 	unsigned int logicalSliceAddr;
@@ -125,18 +125,16 @@ typedef struct _DATASET_MANAGEMENT_RANGE
 	unsigned int nextEntry : 16;
 	unsigned int hashPrevEntry : 16;
 	unsigned int hashNextEntry : 16;
-	unsigned int flag;
 } DATASET_MANAGEMENT_RANGE;
 
 typedef struct _DSM_RANGE{
 	DATASET_MANAGEMENT_RANGE dsmRange[AVAILABLE_DSM_RANGE_ENTRY_COUNT];
-	unsigned int tailEntry;
 } DSM_RANGE, *P_DSM_RANGE;
 
-//typedef struct _DSM_RANGE_LRU_LIST {
-//	unsigned int headEntry : 16;
-//	unsigned int tailEntry : 16;
-//} DSM_RANGE_LRU_LIST, *P_DSM_RANGE_LRU_LIST;
+typedef struct _DSM_RANGE_LRU_LIST {
+	unsigned int headEntry : 16;
+	unsigned int tailEntry : 16;
+} DSM_RANGE_LRU_LIST, *P_DSM_RANGE_LRU_LIST;
 
 typedef struct _DSM_RANGE_HASH_ENTRY{
 	unsigned int headEntry : 16;
@@ -159,11 +157,6 @@ typedef struct _REG_BUF_MAP {
 	unsigned int tail;
 } REG_BUF_MAP, *P_REG_BUF_MAP;
 
-void VerifyAllHashLists();
-void DebugCheckHeadTail(unsigned int hashEntry);
-void DebugCheckBidirectionalLink(unsigned int hashEntry);
-void DebugCheckHashListOrder(unsigned int hashEntry);
-
 void InitDataBuf();
 unsigned int CheckDataBufHit(unsigned int reqSlotTag);
 unsigned int AllocateDataBuf();
@@ -182,7 +175,7 @@ void PutToDsmRangeHashList(unsigned int bufEntry);
 void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry);
 unsigned int FindDsmRangeHashTableEntry(unsigned int length);
 unsigned int SmallestDSMBuftoLRUList();
-void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check);
+void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3);
 
 unsigned int cmp(const void *a, const void *b);
 void train_model();
@@ -197,7 +190,7 @@ extern P_TEMPORARY_DATA_BUF_MAP tempDataBufMapPtr;
 
 extern P_ASYNC_TRIM_BIT_MAP asyncTrimBitMapPtr;
 extern P_DSM_RANGE dsmRangePtr;
-//extern DSM_RANGE_LRU_LIST dsmRangeLruList;
+extern DSM_RANGE_LRU_LIST dsmRangeLruList;
 extern P_DSM_RANGE_HASH_TABLE dsmRangeHashTable;
 
 extern P_REG_BUF_MAP regressionBufMapPtr;

@@ -1,18 +1,20 @@
 =========================================================
 parameter information
-write_cnt: 1311034, gc_cnt: 3630, gc copy cnt: 200822
-requested trim cnt: 0, performed block cnt: 0, ERR cnt: 0
+write_cnt: 5850, gc_cnt: 0, gc copy cnt: 0
+requested trim cnt: 0, requested block cnt: 0, trimmed page cnt: 0, ERR cnt: 0
 regression train cnt: 0, fallback train cnt: 0
 regression return cnt: 0, fallback return cnt: 0
-utilization: 84 Percent
+Perfom Dealloc total_us: 5133
+utilization: 0 Percent
 parameter initialized
 =========================================================
 =========================================================
 parameter information
-write_cnt: 1632998, gc_cnt: 23708, gc copy cnt: 1401755
-requested trim cnt: 4389, performed block cnt: 5140850, ERR cnt: 0
+write_cnt: 890483, gc_cnt: 0, gc copy cnt: 0
+requested trim cnt: 343601, requested block cnt: 1566734, trimmed page cnt: 925736, ERR cnt: 0
 regression train cnt: 0, fallback train cnt: 0
 regression return cnt: 0, fallback return cnt: 0
-utilization: 88 Percent
+Perfom Dealloc total_us: 284386272
+utilization: 12 Percent
 parameter initialized
 =========================================================

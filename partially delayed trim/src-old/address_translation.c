@@ -98,7 +98,6 @@ void InitSliceMap()
 		logicalSliceMapPtr->logicalSlice[sliceAddr].blk1 = 0;
 		logicalSliceMapPtr->logicalSlice[sliceAddr].blk2 = 0;
 		logicalSliceMapPtr->logicalSlice[sliceAddr].blk3 = 0;
-		logicalSliceMapPtr->logicalSlice[sliceAddr].Trim_Write = 0;
 
 		virtualSliceMapPtr->virtualSlice[sliceAddr].logicalSliceAddr = LSA_NONE;
 		virtualSliceMapPtr->virtualSlice[sliceAddr].blk0 = 0;
@@ -661,7 +660,6 @@ unsigned int AddrTransWrite(unsigned int dataBufEntry)
 
 	if(logicalSliceAddr < SLICES_PER_SSD)
 	{
-		write_cnt++;
 		real_write_cnt++;
 		InvalidateOldVsa(logicalSliceAddr);
 

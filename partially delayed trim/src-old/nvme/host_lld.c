@@ -248,15 +248,14 @@ unsigned int check_nvme_cmd_come()
 	return (unsigned int)nvmeReg.cmdValid;
 }
 
+
 unsigned int get_nvme_cmd(unsigned short *qID, unsigned short *cmdSlotTag, unsigned int *cmdSeqNum, unsigned int *cmdDword)
 {
-	int oldcmd = 0;
 	NVME_CMD_FIFO_REG nvmeReg;
 	
 	if (cmd_by_trim == 1)
 	{
 		cmd_by_trim = 0;
-		oldcmd = 1;
 		nvmeReg.dword = global_nvmeReg.dword;
 	}
 	else
@@ -269,10 +268,7 @@ unsigned int get_nvme_cmd(unsigned short *qID, unsigned short *cmdSlotTag, unsig
 		*qID = nvmeReg.qID;
 		*cmdSlotTag = nvmeReg.cmdSlotTag;
 		*cmdSeqNum = nvmeReg.cmdSeqNum;
-
-		if (oldcmd == 1)
-			xil_printf("nvmeReg.cmdSlotTag = 0x%X\r\n", nvmeReg.cmdSlotTag);
-
+		//xil_printf("nvmeReg.cmdSlotTag = 0x%X\r\n", nvmeReg.cmdSlotTag);
 		addr = NVME_CMD_SRAM_ADDR + (nvmeReg.cmdSlotTag * 64);
 		for(idx = 0; idx < 16; idx++)
 			*(cmdDword + idx) = IO_READ32(addr + (idx * 4));

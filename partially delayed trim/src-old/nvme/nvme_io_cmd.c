@@ -61,7 +61,6 @@
 #include "../data_buffer.h"
 #include "../ftl_config.h"
 #include "../request_transform.h"
-#include "../memory_map.h"
 
 void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 {
@@ -99,52 +98,29 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 
 	if ((nlb == 77) && (startLba[0] == 77))
 	{
+		xil_printf("=========================================================\r\n");
+		xil_printf("parameter information\r\n");
+		xil_printf("write_cnt: %u, gc_cnt: %u, gc copy cnt: %u\n", write_cnt, gc_cnt, gc_page_copy);
+		xil_printf("requested trim cnt: %u, performed trim cnt: %u, ERR cnt: %u\n", trim_cnt, async_trim_cnt, err);
+		xil_printf("regression train cnt: %u, fallback train cnt: %u\n", train_cnt, fallback_cnt);
+		xil_printf("regression return cnt: %u, fallback return cnt: %u\n", return_rg, return_fb);
+
 		unsigned int util=
 				100 * (((real_write_cnt) * 16) / 1024) /
 				(storageCapacity_L / ((1024 * 1024) / BYTES_PER_NVME_BLOCK));
 
-		xil_printf("=========================================================\r\n");
-		xil_printf("parameter information\r\n");
-		xil_printf("write_cnt: %u, gc_cnt: %u, gc copy cnt: %u \n", write_cnt, gc_cnt, gc_page_copy);
-		xil_printf("requested trim cnt: %u, async performed block cnt: %u, async buffered block cnt: %u, sync performed block cnt: %u, GC performed block cnt: %u real trimmed block: %u, err cnt: %u\n", trim_cnt, async_trim_cnt, async_req_blcok, sync_trim_cnt, gc_trim_cnt, realtrimmedRange, err);
-		xil_printf("regression train cnt: %u, fallback train cnt: %u\n", train_cnt, fallback_cnt);
-		xil_printf("regression return cnt: %u, fallback return cnt: %u\n", return_rg, return_fb);
-		xil_printf("utilization: %d Percent, allocate_full_cnt: %u, async_trim_buf: %u, sync_trim_buf: %u\n", util, allocate_full_cnt, async_trim_buf , sync_trim_buf);
-		xil_printf("parameter initialized\r\n");
-
-		xil_printf("idle trim cnt: %u, gc trim cnt: %u, done return: %u, force return: %u\r\n", asynctrim, gctrim, bufnone, forcereturn);
-		xil_printf("Perfom Dealloc total_us: %u, write_invalidate_ov: %u, trim_invalid_cnt: %u\r\n", total_us, total_write_us, trim_invalid);
-		xil_printf("=========================================================\r\n");
-
+		xil_printf("utilization: %d Percent\n", util);
 		write_cnt = 0;
-		total_us = 0;
-		asynctrim = 0;
-		gctrim = 0;
-		bufnone = 0;
-		forcereturn = 0;
-		async_req_blcok = 0;
 		trim_cnt = 0;
 		async_trim_cnt = 0;
-		sync_trim_buf = 0;
-		async_trim_buf = 0;
-		sync_trim_cnt = 0;
-		trim_invalid = 0;
-		total_write_us = 0;
-		gc_trim_cnt = 0;
 		gc_cnt = 0;
-		realtrimmedRange = 0;
 		gc_page_copy = 0;
 		train_cnt = 0;
 		fallback_cnt = 0;
 		return_fb = 0;
 		return_rg = 0;
-		err = 0;
-
-		if (pcheck != 1)
-			pcheck = 1;
-
-		if (pcheck == 1)
-			g_time_cnt = 20000000;
+		xil_printf("parameter initialized\r\n");
+		xil_printf("=========================================================\r\n");
 	}
 
 	ASSERT(startLba[0] < storageCapacity_L && (startLba[1] < STORAGE_CAPACITY_H || startLba[1] == 0));
@@ -186,20 +162,19 @@ void handle_nvme_io_write(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 
 void handle_asyncTrim(unsigned int forced, unsigned int Range)
 {
-	if(forced == 0)
-		asynctrim++;
-	else
-		gctrim++;
-
-	int blk0, blk1, blk2, blk3, tcheck;
+    int blk0, blk1, blk2, blk3, tcheck;
     tcheck = 0;
     int tempSlba, tempNlb;
     int nlb, slba, bufEntry, hashIndex;
     unsigned int nextEntry;
     unsigned int trimmedRange = 0;
+    // Range를 4000으로 곱해줌 (4KiB 단위가 아닌, 4000이 필요한 경우일 것)
     Range = Range * 4000;
+
+    // 초기 bufEntry 설정
     bufEntry = DATA_BUF_NONE;
 
+    // 해시테이블(인덱스 32부터 0까지)에서, 활성화된(Range_Flag == 1) 해시 엔트리를 찾음
     for (int j = 32; j >= 0; j--)
     {
         if (dsmRangeHashTable->Range_Flag[j] == 1)
@@ -212,10 +187,10 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
 
     while (bufEntry != DATA_BUF_NONE)
     {
+        async_trim_cnt++;
+
         slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
         nlb  = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
-//        xil_printf("slba: %u, nlb: %u\r\n", slba, nlb);
-
         nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
         blk0 = blk1 = blk2 = blk3 = 1;
 
@@ -288,7 +263,7 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
                     break;
             }
             trimmedRange += partialTrimCount;
-            TRIM(slba, blk0, blk1, blk2, blk3, 1);
+            TRIM(slba, blk0, blk1, blk2, blk3);
             tcheck = 1;
             tempSlba = slba + (4 - (slba % 4));
             tempNlb  = nlb  - (4 - (slba % 4));
@@ -297,7 +272,7 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
 
             while (nlb > 4)
             {
-                TRIM(slba, 0, 0, 0, 0, 1);
+                TRIM(slba, 0, 0, 0, 0);
                 tcheck = 1;
                 trimmedRange += 4;
                 slba += 4;
@@ -308,24 +283,15 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
                     trimmedRange = 0;
                     dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
                     dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
-                    dsmRangePtr->dsmRange[bufEntry].flag = 1;
-                    forcereturn++;
                     return;
                 }
 
-//                if ((forced == 0) && (g_time_cnt != 0))
-//                {
-//                    cmd_by_trim = check_nvme_cmd_come();
-//                    if (cmd_by_trim == 1)
-//                    {
-//                    	xil_printf("new i/o come\r\n");
-//
-//                        trimmedRange = 0;
-//                        dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
-//                        dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
-//                        return;
-//                    }
-//                }
+                if (forced == 0)
+                {
+                    cmd_by_trim = check_nvme_cmd_come();
+                    if (cmd_by_trim == 1)
+                        return;
+                }
             }
 
             blk0 = blk1 = blk2 = blk3 = 1;
@@ -355,21 +321,10 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
             }
             if (nlb > 0)
             {
-                TRIM(slba, blk0, blk1, blk2, blk3, 1);
+                TRIM(slba, blk0, blk1, blk2, blk3);
 				tcheck = 1;
             }
         }
-        if(forced == 0)
-        {
-//        	asynctrim++;
-        	async_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
-        }
-        else
-        {
-//        	gctrim++;
-    		gc_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
-        }
-
         SelectiveGetFromDsmRangeHashList(bufEntry);
 
         if ((hashIndex == 0) &&
@@ -403,14 +358,12 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
 
     if (tcheck == 1)
     {
-//    	for(int sliceAddr=0; sliceAddr<SLICES_PER_SSD ; sliceAddr++)
-//    		logicalSliceMapPtr->logicalSlice[sliceAddr].Trim_Write = 0;
     	for (int i = 0; i < BITMAP_SIZE; i++)
     		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
     }
-    bufnone += 1;
-    allocate_full_cnt = 0;
 }
+
+
 
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 {
@@ -439,16 +392,12 @@ void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 		}
 		case IO_NVM_WRITE:
 		{
-			time_cnt = 0;
-//			if(do_trim_flag != 0)
-//				xil_printf("IO Write Command\r\n");
-
+//			xil_printf("IO Write Command\r\n");
 			handle_nvme_io_write(nvmeCmd->cmdSlotTag, nvmeIOCmd);
 			break;
 		}
 		case IO_NVM_READ:
 		{
-//			time_cnt = 0;
 //			xil_printf("IO Read Command\r\n");
 			handle_nvme_io_read(nvmeCmd->cmdSlotTag, nvmeIOCmd);
 			break;

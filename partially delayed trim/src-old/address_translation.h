@@ -116,7 +116,6 @@ typedef struct _LOGICAL_SLICE_ENTRY {
 	unsigned int blk1 : 8;
 	unsigned int blk2 : 8;
 	unsigned int blk3 : 8;
-	unsigned int Trim_Write;
 } LOGICAL_SLICE_ENTRY, *P_LOGICAL_SLICE_ENTRY;
 
 typedef struct _LOGICAL_SLICE_MAP {

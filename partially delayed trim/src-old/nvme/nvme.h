@@ -48,9 +48,6 @@
 //   - First draft
 //////////////////////////////////////////////////////////////////////////////////
 
-#include "xil_printf.h"
-#include "xtime_l.h"
-
 #ifndef __NVME_H_
 #define __NVME_H_
 
@@ -870,21 +867,8 @@ typedef struct {
 RegressionModel reg_model;
 unsigned int util_count[1001];
 /////////////////
-unsigned int allocate_full_cnt;
-unsigned int total_us;
-unsigned int total_write_us;
-
-unsigned int trim_invalid;
-
-struct {
-    unsigned int hi;
-    unsigned int lo;
-} xtime_stamp;
 
 unsigned int trim_flag;
-unsigned int async_trim_buf;
-unsigned int async_req_blcok;
-unsigned int sync_trim_buf;
 unsigned int do_trim_flag;
 unsigned int trim_LSA;
 unsigned int real_write_cnt;
@@ -894,12 +878,6 @@ unsigned int gc_cnt;
 unsigned int write_cnt;
 unsigned int trim_cnt;
 unsigned int async_trim_cnt;
-unsigned int gc_trim_cnt;
-unsigned int sync_trim_cnt;
-unsigned int asynctrim;
-unsigned int gctrim;
-unsigned int bufnone;
-unsigned int forcereturn;
 unsigned int err;
 
 unsigned int return_rg;
@@ -910,13 +888,10 @@ int train_cnt;
 int fallback_cnt;
 int train_init;
 int dsmCount;
-unsigned int g_time_cnt;
 int trim_perf;
-unsigned int realtrimmedRange;
+
 unsigned int train_thres_check;
 unsigned int train_thres;
 unsigned int tcheck;
-unsigned int pcheck;
-unsigned int time_cnt;
 
 #endif	//__NVME_H_
