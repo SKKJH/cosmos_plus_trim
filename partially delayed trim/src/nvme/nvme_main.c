@@ -89,6 +89,9 @@ void nvme_main()
 
 	gc_cnt = 0;
 	write_cnt = 0;
+	dsm_req = 0;
+	READ_ERR = 0;
+	WRITE_ERR = 0;
 	trim_cnt = 0;
 	realtrimmedRange = 0;
 	async_trim_cnt = 0;
@@ -108,6 +111,7 @@ void nvme_main()
 	train_init = 0;
 	fallback_cnt = 0;
 	train_thres = 0;
+	tb_start = -1;
 	async_req_blcok = 0;
 	tcheck = 0;
 
@@ -171,7 +175,8 @@ void nvme_main()
 			xil_printf("=========================================================\r\n");
 			xil_printf("parameter information\r\n");
 			xil_printf("write_cnt: %u, gc_cnt: %u, gc copy cnt: %u\n", write_cnt, gc_cnt, gc_page_copy);
-			xil_printf("requested trim cnt: %u, async performed block cnt: %u, sync performed block cnt: %u, GC performed block cnt: %u real trimmed block: %u, err cnt: %u\n", trim_cnt, async_trim_cnt, sync_trim_cnt, gc_trim_cnt, realtrimmedRange, err);
+			xil_printf("requested trim cnt: %u, async performed block cnt: %u\n", trim_cnt, async_trim_cnt);
+			xil_printf("sync performed block cnt: %u, GC performed block cnt: %u real trimmed block: %u, err cnt: %u\n", sync_trim_cnt, gc_trim_cnt, realtrimmedRange, err);
 			xil_printf("regression train cnt: %u, fallback train cnt: %u\n", train_cnt, fallback_cnt);
 			xil_printf("regression return cnt: %u, fallback return cnt: %u\n", return_rg, return_fb);
 			xil_printf("utilization: %d Percent, allocate_full_cnt: %u, async_trim_buf: %u, sync_trim_buf: %u\n", util, allocate_full_cnt, async_trim_buf , sync_trim_buf);

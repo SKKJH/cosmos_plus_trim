@@ -881,7 +881,12 @@ struct {
     unsigned int lo;
 } xtime_stamp;
 
+
+unsigned int WRITE_ERR;
+unsigned int READ_ERR;
+
 unsigned int trim_flag;
+unsigned int dsm_req;
 unsigned int async_trim_buf;
 unsigned int async_req_blcok;
 unsigned int sync_trim_buf;
@@ -904,6 +909,8 @@ unsigned int err;
 
 unsigned int return_rg;
 unsigned int return_fb;
+
+int tb_start;
 
 int cmd_by_trim;
 int train_cnt;

@@ -50,6 +50,7 @@
 #include "xil_printf.h"
 #include "memory_map.h"
 #include "nvme/debug.h"
+#include "nvme/nvme.h"
 
 P_COMPLETE_FLAG_TABLE completeFlagTablePtr;
 P_STATUS_REPORT_TABLE statusReportTablePtr;
@@ -923,18 +924,19 @@ void ExecuteNandReq(unsigned int chNo, unsigned int wayNo, unsigned int reqStatu
 						dieStateTablePtr->dieState[chNo][wayNo].dieState = DIE_STATE_IDLE;
 						return;
 					}
-
+//
 				if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_READ)
-					xil_printf("Read Trigger FAIL on      ");
-				else if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_READ_TRANSFER)
-					xil_printf("Read Transfer FAIL on     ");
+					READ_ERR += 1;
 				else if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_WRITE)
-					xil_printf("Write FAIL on             ");
-				else if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_ERASE)
-					xil_printf("Erase FAIL on             ");
+					WRITE_ERR += 1;
+//					xil_printf("Write FAIL on             ");
+//				else if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_READ_TRANSFER)
+//					xil_printf("Read Transfer FAIL on     ");
+//				else if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_ERASE)
+//					xil_printf("Erase FAIL on             ");
 
 				rowAddr = GenerateNandRowAddr(reqSlotTag);
-				xil_printf("ch %x way %x rowAddr %x / completion %x statusReport %x \r\n", chNo, wayNo, rowAddr, completeFlagTablePtr->completeFlag[chNo][wayNo],statusReportTablePtr->statusReport[chNo][wayNo]);
+//				xil_printf("ch %x way %x rowAddr %x / completion %x statusReport %x \r\n", chNo, wayNo, rowAddr, completeFlagTablePtr->completeFlag[chNo][wayNo],statusReportTablePtr->statusReport[chNo][wayNo]);
 
 				if(reqPoolPtr->reqPool[reqSlotTag].reqOpt.nandEcc == REQ_OPT_NAND_ECC_OFF)
 					if(reqPoolPtr->reqPool[reqSlotTag].reqOpt.dataBufFormat == REQ_OPT_DATA_BUF_ADDR)

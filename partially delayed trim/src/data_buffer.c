@@ -346,78 +346,6 @@ unsigned int FindDsmRangeHashTableEntry(unsigned int length)
     return index;
 }
 
-
-
-//unsigned int FindDsmRangeHashTableEntry(unsigned int length)
-//{
-//    if (length < 8192)
-//        return 0;
-//    else if (length < 16384)
-//        return 1;
-//    else if (length < 24576)
-//        return 2;
-//    else if (length < 32768)
-//        return 3;
-//    else if (length < 40960)
-//        return 4;
-//    else if (length < 49152)
-//        return 5;
-//    else if (length < 57344)
-//        return 6;
-//    else if (length < 65536)
-//        return 7;
-//    else if (length < 73728)
-//        return 8;
-//    else if (length < 81920)
-//        return 9;
-//    else if (length < 90112)
-//        return 10;
-//    else if (length < 98304)
-//        return 11;
-//    else if (length < 106496)
-//        return 12;
-//    else if (length < 114688)
-//        return 13;
-//    else if (length < 122880)
-//        return 14;
-//    else if (length < 131072)
-//        return 15;
-//    else if (length < 139264)
-//        return 16;
-//    else if (length < 147456)
-//        return 17;
-//    else if (length < 155648)
-//        return 18;
-//    else if (length < 163840)
-//        return 19;
-//    else if (length < 172032)
-//        return 20;
-//    else if (length < 180224)
-//        return 21;
-//    else if (length < 188416)
-//        return 22;
-//    else if (length < 196608)
-//        return 23;
-//    else if (length < 204800)
-//        return 24;
-//    else if (length < 212992)
-//        return 25;
-//    else if (length < 221184)
-//        return 26;
-//    else if (length < 229376)
-//        return 27;
-//    else if (length < 237568)
-//        return 28;
-//    else if (length < 245760)
-//        return 29;
-//    else if (length < 253952)
-//        return 30;
-//    else if (length < 262144)
-//        return 31;
-//    else
-//    	return 32;
-//}
-
 void DebugCheckHashListOrder(unsigned int hashEntry) {
     unsigned int prevRealLB = 0xFFFFFFFF;
     unsigned int entry = dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry;
@@ -482,11 +410,9 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 
 	newLength = dsmRangePtr->dsmRange[bufEntry].RealLB;
 	hashEntry = FindDsmRangeHashTableEntry(newLength);
-
 	dsmRangeHashTable->Range_Flag[hashEntry] = 1;
 	currentEntry = dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry;
 	prevEntry = DATA_BUF_NONE;
-
 //	while (currentEntry != DATA_BUF_NONE)
 //	{
 //		if (dsmRangePtr->dsmRange[currentEntry].RealLB <= newLength) {
@@ -495,21 +421,16 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 //		prevEntry = currentEntry;
 //		currentEntry = dsmRangePtr->dsmRange[currentEntry].hashNextEntry;
 //	}
-
 	dsmRangePtr->dsmRange[bufEntry].hashPrevEntry = DATA_BUF_NONE;
 	dsmRangePtr->dsmRange[bufEntry].hashNextEntry = DATA_BUF_NONE;
-
 	if (prevEntry == DATA_BUF_NONE)
 	{
 		dsmRangePtr->dsmRange[bufEntry].hashNextEntry = currentEntry;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry = bufEntry;
-
-		if (currentEntry != DATA_BUF_NONE) {
+		if (currentEntry != DATA_BUF_NONE)
 			dsmRangePtr->dsmRange[currentEntry].hashPrevEntry = bufEntry;
-		}
-		else {
+		else
 			dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = bufEntry;
-		}
 	}
 	else
 	{
@@ -517,21 +438,17 @@ void PutToDsmRangeHashList(unsigned int bufEntry)
 		dsmRangePtr->dsmRange[bufEntry].hashNextEntry = currentEntry;
 		dsmRangePtr->dsmRange[prevEntry].hashNextEntry = bufEntry;
 
-		if (currentEntry != DATA_BUF_NONE) {
+		if (currentEntry != DATA_BUF_NONE)
 			dsmRangePtr->dsmRange[currentEntry].hashPrevEntry = bufEntry;
-		}
-		else {
+		else
 			dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = bufEntry;
-		}
 	}
-//	DebugCheckHashListOrder(hashEntry);
 }
 
 void PutDSMBuftoLRUList(unsigned int bufEntry)
 {
 	if(dsmRangePtr->tailEntry != DATA_BUF_NONE)
 	{
-//		xil_printf("8\n");
 		dsmRangePtr->dsmRange[bufEntry].prevEntry = dsmRangePtr->tailEntry;
 		dsmRangePtr->dsmRange[bufEntry].nextEntry = DATA_BUF_NONE;
 		dsmRangePtr->dsmRange[dsmRangePtr->tailEntry].nextEntry = bufEntry;
@@ -539,7 +456,6 @@ void PutDSMBuftoLRUList(unsigned int bufEntry)
 	}
 	else
 	{
-//		xil_printf("9\r\n");
 		dsmRangePtr->dsmRange[bufEntry].prevEntry = DATA_BUF_NONE;
 		dsmRangePtr->dsmRange[bufEntry].nextEntry = DATA_BUF_NONE;
 		dsmRangePtr->tailEntry = bufEntry;
@@ -548,50 +464,39 @@ void PutDSMBuftoLRUList(unsigned int bufEntry)
 
 void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry)
 {
-//	xil_printf("1");
 	unsigned int prevBufEntry, nextBufEntry, hashEntry;
 	if (bufEntry == DATA_BUF_NONE)
 	{
-//		xil_printf("2");
-		xil_printf("Wrong BufEntry for SelectiveGet\r\n");
+	    assert(!"[WARNING] Wrong BufEntry for SelectiveGet [WARNING]");
 		return;
 	}
-//	xil_printf("3");
-
 	prevBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashPrevEntry;
 	nextBufEntry =  dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
-
 	hashEntry = FindDsmRangeHashTableEntry(dsmRangePtr->dsmRange[bufEntry].RealLB);
 
 	if((nextBufEntry != DATA_BUF_NONE) && (prevBufEntry != DATA_BUF_NONE))
 	{
-//		xil_printf("4");
 		dsmRangePtr->dsmRange[prevBufEntry].hashNextEntry = nextBufEntry;
 		dsmRangePtr->dsmRange[nextBufEntry].hashPrevEntry = prevBufEntry;
 	}
 	else if((nextBufEntry == DATA_BUF_NONE) && (prevBufEntry != DATA_BUF_NONE))
 	{
-//		xil_printf("5");
 		dsmRangePtr->dsmRange[prevBufEntry].hashNextEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = prevBufEntry;
 	}
 	else if((nextBufEntry != DATA_BUF_NONE) && (prevBufEntry == DATA_BUF_NONE))
 	{
-//		xil_printf("6");
 		dsmRangePtr->dsmRange[nextBufEntry].hashPrevEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry = nextBufEntry;
 	}
 	else
 	{
-//		xil_printf("7");
 		dsmRangeHashTable->dsmRangeHash[hashEntry].headEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->dsmRangeHash[hashEntry].tailEntry = DATA_BUF_NONE;
 		dsmRangeHashTable->Range_Flag[hashEntry] = 0;
 	}
-
 	dsmRangePtr->dsmRange[bufEntry].hashPrevEntry = DATA_BUF_NONE;
 	dsmRangePtr->dsmRange[bufEntry].hashNextEntry = DATA_BUF_NONE;
-
 	PutDSMBuftoLRUList(bufEntry);
 }
 
@@ -602,16 +507,12 @@ unsigned int SmallestDSMBuftoLRUList()
         unsigned int tmpEntry = dsmRangeHashTable->dsmRangeHash[i].tailEntry;
         if (tmpEntry == DATA_BUF_NONE)
             continue;
-
-//        xil_printf("tailEntry: %u\r\n", tmpEntry);
         SelectiveGetFromDsmRangeHashList(tmpEntry);
         return tmpEntry;
-
 //        unsigned int smallestEntry = tmpEntry;
 //        unsigned int smallest = dsmRangePtr->dsmRange[tmpEntry].RealLB;
 //
 //        tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
-
 //        while (tmpEntry != DATA_BUF_NONE)
 //        {
 //            unsigned int realLB = dsmRangePtr->dsmRange[tmpEntry].RealLB;
@@ -622,13 +523,10 @@ unsigned int SmallestDSMBuftoLRUList()
 //            }
 //            tmpEntry = dsmRangePtr->dsmRange[tmpEntry].hashNextEntry;
 //        }
-
 //        xil_printf("By SmallestDSMBuftoLRUList\r\n");
 //        SelectiveGetFromDsmRangeHashList(smallestEntry);
 //        return smallestEntry;
     }
-
-    // 모든 버킷이 비어 있는 경우
     assert(!"[WARNING] No valid DSM buffer entry found [WARNING]");
     return DATA_BUF_NONE;
 }
@@ -640,7 +538,6 @@ unsigned int AllocateDSMBuf()
 	unsigned int allocEntry = dsmRangePtr->tailEntry;
 
 	if(allocEntry == DATA_BUF_NONE) {
-//		xil_printf("allocEntry: %u\r\n", allocEntry);
 		allocate_full_cnt += 1;
 		allocEntry = SmallestDSMBuftoLRUList();
 	}
@@ -654,111 +551,188 @@ unsigned int AllocateDSMBuf()
 	}
 	else
 	{
-//		xil_printf("FULL BUFFER\r\n");
 		dsmRangePtr->dsmRange[allocEntry].prevEntry = DATA_BUF_NONE;
 		dsmRangePtr->dsmRange[allocEntry].nextEntry = DATA_BUF_NONE;
 		dsmRangePtr->tailEntry = DATA_BUF_NONE;
 	}
-
 	return allocEntry;
 }
 
-void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check)
-{
-	unsigned int lsa, bufEntry;
-	lsa = lba/4;
-
-	if (check == 1)
-		if (asyncTrimBitMapPtr->writeBitMap[lsa/64] & (1ULL << (lsa % 64)))
-		{
-			trim_invalid += 1;
-			return;
-		}
-
-//		if (logicalSliceMapPtr->logicalSlice[lsa].Trim_Write)
+//void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check)
+//{
+//	XTime tStart, tEnd;
+//	XTime tTime;
+//	unsigned int lsa, bufEntry, xtime_hi, xtime_lo;
+//	lsa = lba/4;
+//
+//	if (check == 1)
+//		if (asyncTrimBitMapPtr->writeBitMap[lsa/64] & (1ULL << (lsa % 64)))
 //		{
-//			logicalSliceMapPtr->logicalSlice[lsa].Trim_Write = 0;
+//			trim_invalid += 1;
 //			return;
 //		}
+//
+//	bufEntry = CheckDataBufHitbyLSA(lsa);
+//	if (bufEntry != DATA_BUF_FAIL)
+//	{
+//        if (blk0 == 0)
+//        {
+//            dataBufMapPtr->dataBuf[bufEntry].blk0 = 0;
+//        }
+//        if (blk1 == 0)
+//        {
+//            dataBufMapPtr->dataBuf[bufEntry].blk1 = 0;
+//        }
+//        if (blk2 == 0)
+//        {
+//            dataBufMapPtr->dataBuf[bufEntry].blk2 = 0;
+//        }
+//        if (blk3 == 0)
+//        {
+//            dataBufMapPtr->dataBuf[bufEntry].blk3 = 0;
+//        }
+//        if ((dataBufMapPtr->dataBuf[bufEntry].blk0 == 0) &&
+//            (dataBufMapPtr->dataBuf[bufEntry].blk1 == 0) &&
+//            (dataBufMapPtr->dataBuf[bufEntry].blk2 == 0) &&
+//            (dataBufMapPtr->dataBuf[bufEntry].blk3 == 0))
+//        {
+////			XTime_GetTime(&tStart);
+//            unsigned int prevBufEntry, nextBufEntry;
+//            prevBufEntry = dataBufMapPtr->dataBuf[bufEntry].prevEntry;
+//            nextBufEntry = dataBufMapPtr->dataBuf[bufEntry].nextEntry;
+//
+//            if (prevBufEntry != DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
+//                dataBufMapPtr->dataBuf[prevBufEntry].nextEntry = nextBufEntry;
+//                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = prevBufEntry;
+//                nextBufEntry = DATA_BUF_NONE;
+//                prevBufEntry = dataBufLruList.tailEntry;
+//                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
+//                dataBufLruList.tailEntry = bufEntry;
+//            } else if (prevBufEntry != DATA_BUF_NONE && nextBufEntry == DATA_BUF_NONE) {
+//                dataBufLruList.tailEntry = bufEntry;
+//            } else if (prevBufEntry == DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
+//                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = DATA_BUF_NONE;
+//                dataBufLruList.headEntry = nextBufEntry;
+//                prevBufEntry = dataBufLruList.tailEntry;
+//                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
+//                dataBufLruList.tailEntry = bufEntry;
+//            } else {
+//                prevBufEntry = DATA_BUF_NONE;
+//                nextBufEntry = DATA_BUF_NONE;
+//                dataBufLruList.headEntry = bufEntry;
+//                dataBufLruList.tailEntry = bufEntry;
+//            }
+//            SelectiveGetFromDataBufHashList(bufEntry);
+//            dataBufMapPtr->dataBuf[bufEntry].blockingReqTail = REQ_SLOT_TAG_NONE;
+//            dataBufMapPtr->dataBuf[bufEntry].dirty = DATA_BUF_CLEAN;
+//            dataBufMapPtr->dataBuf[bufEntry].reserved0 = 0;
+////			XTime_GetTime(&tEnd);
+////			tTime = (tEnd - tStart);
+////			xtime_hi = (unsigned int)(tTime >> 32);
+////			xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+////			xil_printf("Write Buffer: %u\r\n", xtime_lo);
+//        }
+//	}
+//	unsigned int virtualSliceAddr = logicalSliceMapPtr->logicalSlice[lsa].virtualSliceAddr;
+//	if (virtualSliceAddr != VSA_NONE) {
+//		if (blk0 == 0) {
+//			logicalSliceMapPtr->logicalSlice[lsa].blk0 = 0;
+//		}
+//		if (blk1 == 0) {
+//			logicalSliceMapPtr->logicalSlice[lsa].blk1 = 0;
+//		}
+//		if (blk2 == 0) {
+//			logicalSliceMapPtr->logicalSlice[lsa].blk2 = 0;
+//		}
+//		if (blk3 == 0) {
+//			logicalSliceMapPtr->logicalSlice[lsa].blk3 = 0;
+//		}
+//		if ((logicalSliceMapPtr->logicalSlice[lsa].blk0 == 0) &&
+//			(logicalSliceMapPtr->logicalSlice[lsa].blk1 == 0) &&
+//			(logicalSliceMapPtr->logicalSlice[lsa].blk2 == 0) &&
+//	        (logicalSliceMapPtr->logicalSlice[lsa].blk3 == 0))
+//		{
+//			realtrimmedRange += 4;
+//
+////			XTime_GetTime(&tStart);
+//			InvalidateOldVsa(lsa);
+////			XTime_GetTime(&tEnd);
+////			tTime = (tEnd - tStart);
+////			xtime_hi = (unsigned int)(tTime >> 32);
+////			xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+////			xil_printf("InvalidateOldVsa: %u\r\n", xtime_lo);
+//		}
+//	}
+//}
 
-	bufEntry = CheckDataBufHitbyLSA(lsa);
-	if (bufEntry != DATA_BUF_FAIL)
-	{
-        if (blk0 == 0)
-        {
-            dataBufMapPtr->dataBuf[bufEntry].blk0 = 0;
-        }
-        if (blk1 == 0)
-        {
-            dataBufMapPtr->dataBuf[bufEntry].blk1 = 0;
-        }
-        if (blk2 == 0)
-        {
-            dataBufMapPtr->dataBuf[bufEntry].blk2 = 0;
-        }
-        if (blk3 == 0)
-        {
-            dataBufMapPtr->dataBuf[bufEntry].blk3 = 0;
-        }
-        if ((dataBufMapPtr->dataBuf[bufEntry].blk0 == 0) &&
-            (dataBufMapPtr->dataBuf[bufEntry].blk1 == 0) &&
-            (dataBufMapPtr->dataBuf[bufEntry].blk2 == 0) &&
-            (dataBufMapPtr->dataBuf[bufEntry].blk3 == 0))
-        {
-            unsigned int prevBufEntry, nextBufEntry;
-            prevBufEntry = dataBufMapPtr->dataBuf[bufEntry].prevEntry;
-            nextBufEntry = dataBufMapPtr->dataBuf[bufEntry].nextEntry;
+void TRIM(unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check)
+{
+    unsigned int lsa = lba / 4;
 
-            if (prevBufEntry != DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
-                dataBufMapPtr->dataBuf[prevBufEntry].nextEntry = nextBufEntry;
-                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = prevBufEntry;
-                nextBufEntry = DATA_BUF_NONE;
-                prevBufEntry = dataBufLruList.tailEntry;
-                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
+    // Early return for invalid cases
+    if (check && (asyncTrimBitMapPtr->writeBitMap[lsa / 64] & (1ULL << (lsa % 64)))) {
+        trim_invalid++;
+        return;
+    }
+
+    unsigned int bufEntry = CheckDataBufHitbyLSA(lsa);
+    if (bufEntry != DATA_BUF_FAIL) {
+        DATA_BUF_ENTRY *buf = &dataBufMapPtr->dataBuf[bufEntry];
+
+        // 블록 값 직접 갱신 (비트 연산 최적화)
+        buf->blk0 = blk0 ? buf->blk0 : 0;
+        buf->blk1 = blk1 ? buf->blk1 : 0;
+        buf->blk2 = blk2 ? buf->blk2 : 0;
+        buf->blk3 = blk3 ? buf->blk3 : 0;
+
+        // 전체 blk가 0인지 빠른 검사
+        if (!(buf->blk0 | buf->blk1 | buf->blk2 | buf->blk3)) {
+            // LRU 리스트에서 현재 bufEntry 제거 후 tail로 이동
+            unsigned int prev = buf->prevEntry;
+            unsigned int next = buf->nextEntry;
+
+            if (prev != DATA_BUF_NONE)
+                dataBufMapPtr->dataBuf[prev].nextEntry = next;
+            else
+                dataBufLruList.headEntry = next;
+
+            if (next != DATA_BUF_NONE)
+                dataBufMapPtr->dataBuf[next].prevEntry = prev;
+            else
+                dataBufLruList.tailEntry = prev;
+
+            // tail로 이동
+            if (dataBufLruList.tailEntry != bufEntry) {
+                if (dataBufLruList.tailEntry != DATA_BUF_NONE)
+                    dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
+                buf->prevEntry = dataBufLruList.tailEntry;
+                buf->nextEntry = DATA_BUF_NONE;
                 dataBufLruList.tailEntry = bufEntry;
-            } else if (prevBufEntry != DATA_BUF_NONE && nextBufEntry == DATA_BUF_NONE) {
-                dataBufLruList.tailEntry = bufEntry;
-            } else if (prevBufEntry == DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
-                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = DATA_BUF_NONE;
-                dataBufLruList.headEntry = nextBufEntry;
-                prevBufEntry = dataBufLruList.tailEntry;
-                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
-                dataBufLruList.tailEntry = bufEntry;
-            } else {
-                prevBufEntry = DATA_BUF_NONE;
-                nextBufEntry = DATA_BUF_NONE;
-                dataBufLruList.headEntry = bufEntry;
-                dataBufLruList.tailEntry = bufEntry;
+
+                if (dataBufLruList.headEntry == DATA_BUF_NONE)
+                    dataBufLruList.headEntry = bufEntry;
             }
+
+            // 상태값 클리어
             SelectiveGetFromDataBufHashList(bufEntry);
-            dataBufMapPtr->dataBuf[bufEntry].blockingReqTail = REQ_SLOT_TAG_NONE;
-            dataBufMapPtr->dataBuf[bufEntry].dirty = DATA_BUF_CLEAN;
-            dataBufMapPtr->dataBuf[bufEntry].reserved0 = 0;
+            buf->blockingReqTail = REQ_SLOT_TAG_NONE;
+            buf->dirty = DATA_BUF_CLEAN;
+            buf->reserved0 = 0;
         }
-	}
-	unsigned int virtualSliceAddr = logicalSliceMapPtr->logicalSlice[lsa].virtualSliceAddr;
-	if (virtualSliceAddr != VSA_NONE) {
-		if (blk0 == 0) {
-			logicalSliceMapPtr->logicalSlice[lsa].blk0 = 0;
-		}
-		if (blk1 == 0) {
-			logicalSliceMapPtr->logicalSlice[lsa].blk1 = 0;
-		}
-		if (blk2 == 0) {
-			logicalSliceMapPtr->logicalSlice[lsa].blk2 = 0;
-		}
-		if (blk3 == 0) {
-			logicalSliceMapPtr->logicalSlice[lsa].blk3 = 0;
-		}
-		if ((logicalSliceMapPtr->logicalSlice[lsa].blk0 == 0) &&
-			(logicalSliceMapPtr->logicalSlice[lsa].blk1 == 0) &&
-			(logicalSliceMapPtr->logicalSlice[lsa].blk2 == 0) &&
-	        (logicalSliceMapPtr->logicalSlice[lsa].blk3 == 0))
-		{
-			realtrimmedRange += 4;
-			InvalidateOldVsa(lsa);
-		}
-	}
+    }
+
+    LOGICAL_SLICE_ENTRY *slice = &logicalSliceMapPtr->logicalSlice[lsa];
+    if (slice->virtualSliceAddr != VSA_NONE) {
+        slice->blk0 = blk0 ? slice->blk0 : 0;
+        slice->blk1 = blk1 ? slice->blk1 : 0;
+        slice->blk2 = blk2 ? slice->blk2 : 0;
+        slice->blk3 = blk3 ? slice->blk3 : 0;
+
+        if (!(slice->blk0 | slice->blk1 | slice->blk2 | slice->blk3)) {
+            realtrimmedRange += 4;
+            InvalidateOldVsa(lsa);
+        }
+    }
 }
 
 unsigned int cmp(const void *a, const void *b) {

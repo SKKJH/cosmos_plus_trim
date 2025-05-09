@@ -71,6 +71,7 @@ void handle_nvme_io_dataset_management(unsigned int cmdSlotTag, NVME_IO_COMMAND 
 
 	dsmInfo10.dword = nvmeIOCmd->dword10;
 	dsmInfo11.dword = nvmeIOCmd->dword11;
+	dsm_req += 1;
 	unsigned int nr = dsmInfo10.NR + 1;
 
 	ad = dsmInfo11.AD;
@@ -105,11 +106,12 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 
 		xil_printf("=========================================================\r\n");
 		xil_printf("parameter information\r\n");
-		xil_printf("write_cnt: %u, gc_cnt: %u, gc copy cnt: %u \n", write_cnt, gc_cnt, gc_page_copy);
+		xil_printf("write_cnt: %u, gc_cnt: %u, gc copy cnt: %u, dsm_req: %u\n", write_cnt, gc_cnt, gc_page_copy, dsm_req);
 		xil_printf("requested trim cnt: %u, async performed block cnt: %u, async buffered block cnt: %u, sync performed block cnt: %u, GC performed block cnt: %u real trimmed block: %u, err cnt: %u\n", trim_cnt, async_trim_cnt, async_req_blcok, sync_trim_cnt, gc_trim_cnt, realtrimmedRange, err);
 		xil_printf("regression train cnt: %u, fallback train cnt: %u\n", train_cnt, fallback_cnt);
 		xil_printf("regression return cnt: %u, fallback return cnt: %u\n", return_rg, return_fb);
 		xil_printf("utilization: %d Percent, allocate_full_cnt: %u, async_trim_buf: %u, sync_trim_buf: %u\n", util, allocate_full_cnt, async_trim_buf , sync_trim_buf);
+		xil_printf("WRITE_ERR: %u, READ_ERR: %u \r\n", WRITE_ERR, READ_ERR);
 		xil_printf("parameter initialized\r\n");
 
 		xil_printf("idle trim cnt: %u, gc trim cnt: %u, done return: %u, force return: %u\r\n", asynctrim, gctrim, bufnone, forcereturn);
@@ -118,12 +120,15 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 
 		write_cnt = 0;
 		total_us = 0;
+		WRITE_ERR = 0;
+		READ_ERR = 0;
 		asynctrim = 0;
 		gctrim = 0;
 		bufnone = 0;
 		forcereturn = 0;
 		async_req_blcok = 0;
 		trim_cnt = 0;
+		dsm_req = 0;
 		async_trim_cnt = 0;
 		sync_trim_buf = 0;
 		async_trim_buf = 0;
@@ -144,7 +149,9 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 			pcheck = 1;
 
 		if (pcheck == 1)
-			g_time_cnt = 20000000;
+			g_time_cnt = 2000000000;
+
+		tb_start += 1;
 	}
 
 	ASSERT(startLba[0] < storageCapacity_L && (startLba[1] < STORAGE_CAPACITY_H || startLba[1] == 0));
@@ -214,7 +221,7 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
     {
         slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
         nlb  = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
-//        xil_printf("slba: %u, nlb: %u\r\n", slba, nlb);
+        xil_printf("bufEntry: %u, handle_asyncTrim slba: %u, nlb: %u\r\n", bufEntry, slba, nlb);
 
         nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
         blk0 = blk1 = blk2 = blk3 = 1;
@@ -313,19 +320,19 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
                     return;
                 }
 
-//                if ((forced == 0) && (g_time_cnt != 0))
-//                {
-//                    cmd_by_trim = check_nvme_cmd_come();
-//                    if (cmd_by_trim == 1)
-//                    {
-//                    	xil_printf("new i/o come\r\n");
-//
-//                        trimmedRange = 0;
-//                        dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
-//                        dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
-//                        return;
-//                    }
-//                }
+                if ((forced == 0) && (g_time_cnt != 0))
+                {
+                    cmd_by_trim = check_nvme_cmd_come();
+                    if (cmd_by_trim == 1)
+                    {
+                    	xil_printf("new i/o come\r\n");
+
+                        trimmedRange = 0;
+                        dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
+                        dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
+                        return;
+                    }
+                }
             }
 
             blk0 = blk1 = blk2 = blk3 = 1;

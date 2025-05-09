@@ -89,13 +89,13 @@ void ReqTransNvmeToSliceForDSM(unsigned int cmdSlotTag, unsigned int nr)
 	{
 		reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = LSA_DSM;
 		trim_LSA = LSA_DSM - 1;
-		trim_flag += 1;
 	}
 	else
 	{
 		reqPoolPtr->reqPool[reqSlotTag].logicalSliceAddr = trim_LSA;
 		trim_LSA = LSA_DSM - 1;
 	}
+	trim_flag += 1;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.startIndex = 0;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nvmeBlockOffset = 0;
 	reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock = 1;
@@ -123,7 +123,7 @@ void ReqTransNvmeToSlice(unsigned int cmdSlotTag, unsigned int startLba, unsigne
 
 	if(cmdCode == IO_NVM_WRITE) {
 		reqCode = REQ_CODE_WRITE;
-		if (trim_flag != 0)
+		if (do_trim_flag != 0)
 		{
 			XTime_GetTime(&tStart);
 
