@@ -55,6 +55,7 @@
 #include "io_access.h"
 
 #include "nvme.h"
+#include "trim.h"
 #include "host_lld.h"
 #include "nvme_io_cmd.h"
 
@@ -115,7 +116,7 @@ void handle_nvme_io_read(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 		xil_printf("parameter initialized\r\n");
 
 		xil_printf("idle trim cnt: %u, gc trim cnt: %u, done return: %u, force return: %u\r\n", asynctrim, gctrim, bufnone, forcereturn);
-		xil_printf("Perfom Dealloc total_us: %u, write_invalidate_ov: %u, trim_invalid_cnt: %u\r\n", total_us, total_write_us, trim_invalid);
+		xil_printf("Perfom Dealloc total_cycles: %u, write_invalidate_ov: %u, trim_invalid_cnt: %u\r\n", total_us, total_write_us, trim_invalid);
 		xil_printf("=========================================================\r\n");
 
 		write_cnt = 0;
@@ -190,128 +191,62 @@ void handle_nvme_io_write(unsigned int cmdSlotTag, NVME_IO_COMMAND *nvmeIOCmd)
 	ReqTransNvmeToSlice(cmdSlotTag, startLba[0], nlb, IO_NVM_WRITE);
 }
 
-
 void handle_asyncTrim(unsigned int forced, unsigned int Range)
 {
-	if(forced == 0)
-		asynctrim++;
-	else
-		gctrim++;
+    if (forced == 0)
+        asynctrim++;
+    else
+        gctrim++;
 
-	int blk0, blk1, blk2, blk3, tcheck;
-    tcheck = 0;
-    int tempSlba, tempNlb;
+    int blk0, blk1, blk2, blk3;
     int nlb, slba, bufEntry, hashIndex;
     unsigned int nextEntry;
     unsigned int trimmedRange = 0;
-    Range = Range * 4000;
+    int tcheck = 0;
+
+    Range = Range * 2000;
     bufEntry = DATA_BUF_NONE;
 
-    for (int j = 32; j >= 0; j--)
-    {
-        if (dsmRangeHashTable->Range_Flag[j] == 1)
-        {
+    // 가장 높은 해시 인덱스부터 유효한 DSM 범위를 찾음
+    for (int j = 32; j >= 0; j--) {
+        if (dsmRangeHashTable->Range_Flag[j] == 1) {
             bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
             hashIndex = j;
             break;
         }
     }
 
-    while (bufEntry != DATA_BUF_NONE)
-    {
+    while (bufEntry != DATA_BUF_NONE) {
         slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
         nlb  = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
-        xil_printf("bufEntry: %u, handle_asyncTrim slba: %u, nlb: %u\r\n", bufEntry, slba, nlb);
+//        xil_printf("handle_asyncTrim: bufEntry: %u, slba: %u, nlb: %u\r\n", bufEntry, slba, nlb);
 
         nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
-        blk0 = blk1 = blk2 = blk3 = 1;
 
-        if ((nlb > 0) &&
-            (slba >= 0) &&
-            (nlb < (SLICES_PER_SSD * 4)) &&
-            (slba < (SLICES_PER_SSD * 4)))
-        {
-            int partialTrimCount = 0;
-            switch (slba % 4)
-            {
-                case 0:
-                    if (nlb == 1) {
-                        blk0 = 0;
-                        partialTrimCount = 1;
-                    }
-                    else if (nlb == 2) {
-                        blk0 = 0;
-                        blk1 = 0;
-                        partialTrimCount = 2;
-                    }
-                    else if (nlb == 3) {
-                        blk0 = 0;
-                        blk1 = 0;
-                        blk2 = 0;
-                        partialTrimCount = 3;
-                    }
-                    else {
-                        blk0 = 0;
-                        blk1 = 0;
-                        blk2 = 0;
-                        blk3 = 0;
-                        partialTrimCount = 4;
-                    }
-                    break;
+        if ((nlb > 0) && (slba < (SLICES_PER_SSD * 4)) && (nlb < (SLICES_PER_SSD * 4))) {
+            int mod = slba % 4;
+            int partial_len = (mod == 0) ? 0 : 4 - mod;
+            if (partial_len > nlb) partial_len = nlb;
 
-                case 1:
-                    if (nlb == 1) {
-                        blk1 = 0;
-                        partialTrimCount = 1;
-                    }
-                    else if (nlb == 2) {
-                        blk1 = 0;
-                        blk2 = 0;
-                        partialTrimCount = 2;
-                    }
-                    else {
-                        blk1 = 0;
-                        blk2 = 0;
-                        blk3 = 0;
-                        partialTrimCount = 3;
-                    }
-                    break;
-
-                case 2:
-                    if (nlb == 1) {
-                        blk2 = 0;
-                        partialTrimCount = 1;
-                    }
-                    else {
-                        blk2 = 0;
-                        blk3 = 0;
-                        partialTrimCount = 2;
-                    }
-                    break;
-
-                case 3:
-                    blk3 = 0;      // nlb >= 1이면 blk3 한 개만 해제
-                    partialTrimCount = 1;
-                    break;
+            // 1. 처음 unaligned 영역 처리
+            if (partial_len > 0) {
+                set_trim_mask(mod, partial_len, &blk0, &blk1, &blk2, &blk3);
+                TRIM(slba, blk0, blk1, blk2, blk3, 1);
+                tcheck = 1;
+                trimmedRange += partial_len;
+                slba += partial_len;
+                nlb  -= partial_len;
             }
-            trimmedRange += partialTrimCount;
-            TRIM(slba, blk0, blk1, blk2, blk3, 1);
-            tcheck = 1;
-            tempSlba = slba + (4 - (slba % 4));
-            tempNlb  = nlb  - (4 - (slba % 4));
-            slba     = tempSlba;
-            nlb      = tempNlb;
 
-            while (nlb > 4)
-            {
+            // 2. 정렬된 full TRIM 처리
+            while (nlb >= 4) {
                 TRIM(slba, 0, 0, 0, 0, 1);
                 tcheck = 1;
                 trimmedRange += 4;
                 slba += 4;
                 nlb  -= 4;
 
-                if ((forced == 1) && (trimmedRange > Range))
-                {
+                if (forced == 1 && trimmedRange > Range) {
                     trimmedRange = 0;
                     dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
                     dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
@@ -320,104 +255,287 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
                     return;
                 }
 
-                if ((forced == 0) && (g_time_cnt != 0))
-                {
-                    cmd_by_trim = check_nvme_cmd_come();
-                    if (cmd_by_trim == 1)
-                    {
-                    	xil_printf("new i/o come\r\n");
-
-                        trimmedRange = 0;
-                        dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
-                        dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
-                        return;
-                    }
-                }
+                if (forced == 0)
+                	if (check_nvme_cmd_come()) {
+//                		xil_printf("new i/o come\r\n");
+                		dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
+                		dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
+                		return;
+                	}
             }
-
-            blk0 = blk1 = blk2 = blk3 = 1;
-            switch (nlb)
-            {
-                case 1:
-                    blk0 = 0;
-                    break;
-
-                case 2:
-                    blk0 = 0;
-                    blk1 = 0;
-                    break;
-
-                case 3:
-                    blk0 = 0;
-                    blk1 = 0;
-                    blk2 = 0;
-                    break;
-
-                case 4:
-                    blk0 = 0;
-                    blk1 = 0;
-                    blk2 = 0;
-                    blk3 = 0;
-                    break;
-            }
-            if (nlb > 0)
-            {
+            // 3. 남은 tail 영역 처리
+            if (nlb > 0) {
+                set_trim_mask(0, nlb, &blk0, &blk1, &blk2, &blk3);
                 TRIM(slba, blk0, blk1, blk2, blk3, 1);
-				tcheck = 1;
+                tcheck = 1;
+                trimmedRange += nlb;
             }
         }
-        if(forced == 0)
-        {
-//        	asynctrim++;
-        	async_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
-        }
-        else
-        {
-//        	gctrim++;
-    		gc_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
-        }
 
+        // 통계 업데이트
+        if (forced == 0)
+            async_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
+        else
+            gc_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
+
+        // 해시 리스트에서 제거
         SelectiveGetFromDsmRangeHashList(bufEntry);
 
-        if ((hashIndex == 0) &&
-            (dsmRangeHashTable->dsmRangeHash[hashIndex].headEntry == DATA_BUF_NONE))
-        {
+        // 다음 entry 탐색
+        if ((hashIndex == 0) && (dsmRangeHashTable->dsmRangeHash[hashIndex].headEntry == DATA_BUF_NONE)) {
             bufEntry = DATA_BUF_NONE;
-        }
-        else
-        {
-            if (nextEntry == DATA_BUF_NONE)
-            {
-                for (int j = hashIndex; j >= 0; j--)
-                {
-                    if (dsmRangeHashTable->Range_Flag[j] == 1)
-                    {
-                        bufEntry  = dsmRangeHashTable->dsmRangeHash[j].headEntry;
-                        hashIndex = j;
-                        break;
-                    }
-                    bufEntry = DATA_BUF_NONE;
+        } else if (nextEntry == DATA_BUF_NONE) {
+            bufEntry = DATA_BUF_NONE;
+            for (int j = hashIndex; j >= 0; j--) {
+                if (dsmRangeHashTable->Range_Flag[j] == 1) {
+                    bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
+                    hashIndex = j;
+                    break;
                 }
             }
-            else
-            {
-                bufEntry = nextEntry;
-            }
+        } else {
+            bufEntry = nextEntry;
         }
     }
 
     do_trim_flag = 0;
 
-    if (tcheck == 1)
-    {
-//    	for(int sliceAddr=0; sliceAddr<SLICES_PER_SSD ; sliceAddr++)
-//    		logicalSliceMapPtr->logicalSlice[sliceAddr].Trim_Write = 0;
-    	for (int i = 0; i < BITMAP_SIZE; i++)
-    		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
+    if (tcheck == 1) {
+        for (int i = 0; i < BITMAP_SIZE; i++)
+            asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
     }
+
     bufnone += 1;
     allocate_full_cnt = 0;
 }
+
+//void handle_asyncTrim(unsigned int forced, unsigned int Range)
+//{
+//	if(forced == 0)
+//		asynctrim++;
+//	else
+//		gctrim++;
+//
+//	int blk0, blk1, blk2, blk3, tcheck;
+//    tcheck = 0;
+//    int tempSlba, tempNlb;
+//    int nlb, slba, bufEntry, hashIndex;
+//    unsigned int nextEntry;
+//    unsigned int trimmedRange = 0;
+//    Range = Range * 4000;
+//    bufEntry = DATA_BUF_NONE;
+//
+//    for (int j = 32; j >= 0; j--)
+//    {
+//        if (dsmRangeHashTable->Range_Flag[j] == 1)
+//        {
+//            bufEntry = dsmRangeHashTable->dsmRangeHash[j].headEntry;
+//            hashIndex = j;
+//            break;
+//        }
+//    }
+//
+//    while (bufEntry != DATA_BUF_NONE)
+//    {
+//        slba = dsmRangePtr->dsmRange[bufEntry].startingLBA[0];
+//        nlb  = dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks;
+//        xil_printf("bufEntry: %u, handle_asyncTrim slba: %u, nlb: %u\r\n", bufEntry, slba, nlb);
+//
+//        nextEntry = dsmRangePtr->dsmRange[bufEntry].hashNextEntry;
+//        blk0 = blk1 = blk2 = blk3 = 1;
+//
+//        if ((nlb > 0) &&
+//            (slba >= 0) &&
+//            (nlb < (SLICES_PER_SSD * 4)) &&
+//            (slba < (SLICES_PER_SSD * 4)))
+//        {
+//            int partialTrimCount = 0;
+//            switch (slba % 4)
+//            {
+//                case 0:
+//                    if (nlb == 1) {
+//                        blk0 = 0;
+//                        partialTrimCount = 1;
+//                    }
+//                    else if (nlb == 2) {
+//                        blk0 = 0;
+//                        blk1 = 0;
+//                        partialTrimCount = 2;
+//                    }
+//                    else if (nlb == 3) {
+//                        blk0 = 0;
+//                        blk1 = 0;
+//                        blk2 = 0;
+//                        partialTrimCount = 3;
+//                    }
+//                    else {
+//                        blk0 = 0;
+//                        blk1 = 0;
+//                        blk2 = 0;
+//                        blk3 = 0;
+//                        partialTrimCount = 4;
+//                    }
+//                    break;
+//
+//                case 1:
+//                    if (nlb == 1) {
+//                        blk1 = 0;
+//                        partialTrimCount = 1;
+//                    }
+//                    else if (nlb == 2) {
+//                        blk1 = 0;
+//                        blk2 = 0;
+//                        partialTrimCount = 2;
+//                    }
+//                    else {
+//                        blk1 = 0;
+//                        blk2 = 0;
+//                        blk3 = 0;
+//                        partialTrimCount = 3;
+//                    }
+//                    break;
+//
+//                case 2:
+//                    if (nlb == 1) {
+//                        blk2 = 0;
+//                        partialTrimCount = 1;
+//                    }
+//                    else {
+//                        blk2 = 0;
+//                        blk3 = 0;
+//                        partialTrimCount = 2;
+//                    }
+//                    break;
+//
+//                case 3:
+//                    blk3 = 0;      // nlb >= 1이면 blk3 한 개만 해제
+//                    partialTrimCount = 1;
+//                    break;
+//            }
+//            trimmedRange += partialTrimCount;
+//            TRIM(slba, blk0, blk1, blk2, blk3, 1);
+//            tcheck = 1;
+//            tempSlba = slba + (4 - (slba % 4));
+//            tempNlb  = nlb  - (4 - (slba % 4));
+//            slba     = tempSlba;
+//            nlb      = tempNlb;
+//
+//            while (nlb > 4)
+//            {
+//                TRIM(slba, 0, 0, 0, 0, 1);
+//                tcheck = 1;
+//                trimmedRange += 4;
+//                slba += 4;
+//                nlb  -= 4;
+//
+//                if ((forced == 1) && (trimmedRange > Range))
+//                {
+//                    trimmedRange = 0;
+//                    dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
+//                    dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
+//                    dsmRangePtr->dsmRange[bufEntry].flag = 1;
+//                    forcereturn++;
+//                    return;
+//                }
+//
+//                if ((forced == 0) && (g_time_cnt != 0))
+//                {
+//                    cmd_by_trim = check_nvme_cmd_come();
+//                    if (cmd_by_trim == 1)
+//                    {
+//                    	xil_printf("new i/o come\r\n");
+//
+//                        trimmedRange = 0;
+//                        dsmRangePtr->dsmRange[bufEntry].startingLBA[0] = slba;
+//                        dsmRangePtr->dsmRange[bufEntry].lengthInLogicalBlocks = nlb;
+//                        return;
+//                    }
+//                }
+//            }
+//
+//            blk0 = blk1 = blk2 = blk3 = 1;
+//            switch (nlb)
+//            {
+//                case 1:
+//                    blk0 = 0;
+//                    break;
+//
+//                case 2:
+//                    blk0 = 0;
+//                    blk1 = 0;
+//                    break;
+//
+//                case 3:
+//                    blk0 = 0;
+//                    blk1 = 0;
+//                    blk2 = 0;
+//                    break;
+//
+//                case 4:
+//                    blk0 = 0;
+//                    blk1 = 0;
+//                    blk2 = 0;
+//                    blk3 = 0;
+//                    break;
+//            }
+//            if (nlb > 0)
+//            {
+//                TRIM(slba, blk0, blk1, blk2, blk3, 1);
+//				tcheck = 1;
+//            }
+//        }
+//        if(forced == 0)
+//        {
+////        	asynctrim++;
+//        	async_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
+//        }
+//        else
+//        {
+////        	gctrim++;
+//    		gc_trim_cnt += dsmRangePtr->dsmRange[bufEntry].RealLB;
+//        }
+//
+//        SelectiveGetFromDsmRangeHashList(bufEntry);
+//
+//        if ((hashIndex == 0) &&
+//            (dsmRangeHashTable->dsmRangeHash[hashIndex].headEntry == DATA_BUF_NONE))
+//        {
+//            bufEntry = DATA_BUF_NONE;
+//        }
+//        else
+//        {
+//            if (nextEntry == DATA_BUF_NONE)
+//            {
+//                for (int j = hashIndex; j >= 0; j--)
+//                {
+//                    if (dsmRangeHashTable->Range_Flag[j] == 1)
+//                    {
+//                        bufEntry  = dsmRangeHashTable->dsmRangeHash[j].headEntry;
+//                        hashIndex = j;
+//                        break;
+//                    }
+//                    bufEntry = DATA_BUF_NONE;
+//                }
+//            }
+//            else
+//            {
+//                bufEntry = nextEntry;
+//            }
+//        }
+//    }
+//
+//    do_trim_flag = 0;
+//
+//    if (tcheck == 1)
+//    {
+////    	for(int sliceAddr=0; sliceAddr<SLICES_PER_SSD ; sliceAddr++)
+////    		logicalSliceMapPtr->logicalSlice[sliceAddr].Trim_Write = 0;
+//    	for (int i = 0; i < BITMAP_SIZE; i++)
+//    		asyncTrimBitMapPtr->writeBitMap[i] = 0ULL;
+//    }
+//    bufnone += 1;
+//    allocate_full_cnt = 0;
+//}
 
 void handle_nvme_io_cmd(NVME_COMMAND *nvmeCmd)
 {

@@ -362,6 +362,8 @@ void set_auto_tx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigne
 
 void set_auto_rx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigned int devAddr, unsigned int autoCompletion);
 
+void complete_rx_dma(unsigned int slotTag);
+
 void set_link_width(unsigned int linkNum);
 
 void pcie_async_reset(unsigned int rstCnt);

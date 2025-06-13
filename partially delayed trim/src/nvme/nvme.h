@@ -921,7 +921,7 @@ unsigned int g_time_cnt;
 int trim_perf;
 unsigned int realtrimmedRange;
 unsigned int train_thres_check;
-unsigned int train_thres;
+int train_thres;
 unsigned int tcheck;
 unsigned int pcheck;
 unsigned int time_cnt;

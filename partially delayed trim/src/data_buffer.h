@@ -58,7 +58,7 @@
 #define DATA_BUF_DIRTY	1
 #define DATA_BUF_CLEAN	0
 
-#define MAX_SAMPLES 1000
+#define MAX_SAMPLES 100
 #define MAX_PER_UTIL 10
 #define MAX_UTIL 101
 
@@ -183,6 +183,7 @@ void SelectiveGetFromDsmRangeHashList(unsigned int bufEntry);
 unsigned int FindDsmRangeHashTableEntry(unsigned int length);
 unsigned int SmallestDSMBuftoLRUList();
 void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check);
+void empty_sample();
 
 unsigned int cmp(const void *a, const void *b);
 void train_model();

@@ -754,7 +754,10 @@ void IssueNvmeDmaReq(unsigned int reqSlotTag)
 	{
 		while(numOfNvmeBlock < reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.numOfNvmeBlock)
 		{
-			set_auto_rx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, dmaIndex, devAddr, NVME_COMMAND_AUTO_COMPLETION_ON);
+			if (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM)
+				set_auto_rx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, dmaIndex, devAddr, NVME_COMMAND_AUTO_COMPLETION_OFF);
+			else
+				set_auto_rx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag, dmaIndex, devAddr, NVME_COMMAND_AUTO_COMPLETION_ON);
 
 			numOfNvmeBlock++;
 			dmaIndex++;
@@ -793,7 +796,7 @@ void CheckDoneNvmeDmaReq()
 	{
 		prevReq = reqPoolPtr->reqPool[reqSlotTag].prevReq;
 
-		if(reqPoolPtr->reqPool[reqSlotTag].reqCode  == REQ_CODE_RxDMA)
+		if(reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_RxDMA)
 		{
 			if(!rxDone)
 				rxDone = check_auto_rx_dma_partial_done(reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.reqTail , reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.overFlowCnt);

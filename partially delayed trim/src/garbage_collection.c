@@ -73,53 +73,82 @@ void GarbageCollection(unsigned int dieNo)
 {
 	gc_cnt++;
 	tcheck = 0;
-	static XTime tStart, tEnd;
-	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag, valid_page, predicted_valid;
+
+	XTime tStart, tEnd;
+	XTime tTime;
+	unsigned int xtime_hi, xtime_lo;
+
+	unsigned int victimBlockNo, pageNo, virtualSliceAddr, logicalSliceAddr, dieNoForGcCopy, reqSlotTag;
+	int valid_page, predicted_valid;
+
 	unsigned int utilization =
 			100 * (((real_write_cnt) * 16) / 1024) /
 		    		(storageCapacity_L / ((1024 * 1024) / BYTES_PER_NVME_BLOCK));
 
 	victimBlockNo = GetFromGcVictimListNum(dieNo);
 	valid_page = (128 - virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt);
+
+	if (valid_page == 0)
+		empty_sample();
+
 	add_sample(utilization, valid_page);
 
 	if(do_trim_flag != 0)
 	{
 		if (train_init == 0)
 			reg_model.fallback_value = valid_page;
+		train_init = 1;
 
+        XTime_GetTime(&tStart);
 		predicted_valid = predict_valid_page(utilization);
+        XTime_GetTime(&tEnd);
+        tTime = (tEnd - tStart);
+        xtime_hi = (unsigned int)(tTime >> 32);
+        xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+//        xil_printf("First predict_valid overhead: hi = %u, lo = %u\r\n", xtime_hi, xtime_lo);
+//        xil_printf("predicted_valid: %u, real valid: %u\r\n", predicted_valid, valid_page);
 
 		if (((predicted_valid > valid_page) && (((predicted_valid - valid_page)) > 5)) ||
 				((valid_page > predicted_valid) && (((valid_page - predicted_valid)) > 5)))
 		{
-			if (train_thres_check == 1)
-				train_thres += 1;
-
-			train_thres_check = 1;
-			if (train_thres > 1)
-			{
-				train_model();
-				tcheck = 1;
-				train_thres = 0;
-				train_thres_check = 0;
-			}
-		} else
-		{
-			train_thres = 0;
-			train_thres_check = 0;
+			XTime_GetTime(&tStart);
+			train_model();
+			XTime_GetTime(&tEnd);
+			tTime = (tEnd - tStart);
+			xtime_hi = (unsigned int)(tTime >> 32);
+			xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+//			xil_printf("Train_model overhead: hi = %u, lo = %u\r\n", xtime_hi, xtime_lo);
+			tcheck = 1;
 		}
 
 		if (tcheck == 1)
+		{
+	        XTime_GetTime(&tStart);
 			predicted_valid = predict_valid_page(utilization);
+	        XTime_GetTime(&tEnd);
+	        tTime = (tEnd - tStart);
+	        xtime_hi = (unsigned int)(tTime >> 32);
+	        xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+//	        xil_printf("Second predict_valid_page overhead: hi = %u, lo = %u\r\n", xtime_hi, xtime_lo);
+		}
 
+        XTime_GetTime(&tStart);
 		handle_asyncTrim(1, predicted_valid + 1);
+        XTime_GetTime(&tEnd);
+        tTime = (tEnd - tStart);
+        xtime_hi = (unsigned int)(tTime >> 32);
+        xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+//        xil_printf("Handle_asyncTrim overhead: hi = %u, lo = %u, predicted valid page: %u\r\n", xtime_hi, xtime_lo, predicted_valid + 1);
 	}
 
 	victimBlockNo = GetFromGcVictimList(dieNo);
 	dieNoForGcCopy = dieNo;
+	unsigned int copy_cnt = 0;
+	SyncAllLowLevelReqDone();
+
 	if(virtualBlockMapPtr->block[dieNo][victimBlockNo].invalidSliceCnt != SLICES_PER_BLOCK)
 	{
+        XTime_GetTime(&tStart);
 		for(pageNo=0 ; pageNo<USER_PAGES_PER_BLOCK ; pageNo++)
 		{
 			virtualSliceAddr = Vorg2VsaTranslation(dieNo, victimBlockNo, pageNo);
@@ -168,13 +197,20 @@ void GarbageCollection(unsigned int dieNo)
 					SelectLowLevelReqQ(reqSlotTag);
 					SyncAllLowLevelReqDone();
 					gc_page_copy++;
+					copy_cnt++;
 				}
 		}
+        XTime_GetTime(&tEnd);
+        tTime = (tEnd - tStart);
+        xtime_hi = (unsigned int)(tTime >> 32);
+        xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+//        xil_printf("GC Overhead: hi - %u, lo - %u, with Valid Page: %u\r\n", xtime_hi, xtime_lo, copy_cnt);
 	}
+//	else
+//		xil_printf("GC Overhead: hi - %u, lo - %u, with Valid Page: %u\r\n", 0, 0, 0);
 
 	EraseBlock(dieNo, victimBlockNo);
 	SyncAllLowLevelReqDone();
-	train_init = 1;
 }
 
 

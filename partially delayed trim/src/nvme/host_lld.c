@@ -442,11 +442,14 @@ void set_auto_tx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigne
 
 void set_auto_rx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigned int devAddr, unsigned int autoCompletion)
 {
+//	if (autoCompletion != 1)
+//		xil_printf("rx dma slotTag: %u\r\n", cmdSlotTag);
+
 	HOST_DMA_CMD_FIFO_REG hostDmaReg;
 	unsigned char tempTail;
 
 	ASSERT(cmd4KBOffset < 256);
-	
+
 	g_hostDmaStatus.fifoHead.dword = IO_READ32(HOST_DMA_FIFO_CNT_REG_ADDR);
 	while((g_hostDmaStatus.fifoTail.autoDmaRx + 1) % 256 == g_hostDmaStatus.fifoHead.autoDmaRx)
 		g_hostDmaStatus.fifoHead.dword = IO_READ32(HOST_DMA_FIFO_CNT_REG_ADDR);
@@ -471,6 +474,55 @@ void set_auto_rx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigne
 		g_hostDmaAssistStatus.autoDmaRxOverFlowCnt++;
 
 	g_hostDmaStatus.autoDmaRxCnt++;
+}
+
+//void complete_rx_dma(unsigned int slotTag)
+//{
+//	xil_printf("completion slotTag: %u\r\n", slotTag);
+//    HOST_DMA_CMD_FIFO_REG comp = {0};
+//
+//    comp.dmaType       = HOST_DMA_AUTO_TYPE;
+//    comp.dmaDirection  = HOST_DMA_RX_DIRECTION;
+//    comp.cmd4KBOffset  = 0;        // 의미 없음
+//    comp.dmaLen        = 0;        // 길이 0 → 실전송 없음
+//    comp.cmdSlotTag    = slotTag;  // 동일 Tag
+//    comp.autoCompletion= 1;        // ★ Completion 발생
+//
+//    /* FIFO에 더미 엔트리 PUSH */
+//    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR,      comp.dword[0]);
+//    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 12, comp.dword[3]);
+//    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 16, comp.dword[4]);
+//}
+
+void complete_rx_dma(unsigned int slotTag)
+{
+//	xil_printf("complete_rx_dma: %u\r\n", slotTag);
+    /* 1) 먼저 FIFO에 한 칸 이상 비어 있는지 확인 */
+    g_hostDmaStatus.fifoHead.dword = IO_READ32(HOST_DMA_FIFO_CNT_REG_ADDR);
+    while ((g_hostDmaStatus.fifoTail.autoDmaRx + 1) % 256 ==
+           g_hostDmaStatus.fifoHead.autoDmaRx)
+        g_hostDmaStatus.fifoHead.dword = IO_READ32(HOST_DMA_FIFO_CNT_REG_ADDR);
+
+    /* 2) 더미 엔트리 생성 ― DWORD 0~4 전부 채움 */
+    HOST_DMA_CMD_FIFO_REG comp = {0};
+
+    comp.devAddr        = 0;                        // 아무 값 OK, 자리만 채움
+    comp.dmaType        = HOST_DMA_AUTO_TYPE;
+    comp.dmaDirection   = HOST_DMA_RX_DIRECTION;
+    comp.cmd4KBOffset   = 0;
+    comp.dmaLen         = 0;                        // 길이 0
+    comp.autoCompletion = 1;                        // ★ Completion 발생
+    comp.cmdSlotTag     = slotTag;                  // ★ 데이터-DMA와 동일 태그
+
+    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR,       comp.dword[0]);
+    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 4,   comp.dword[1]);  // ← 꼭 필요
+    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 8,   comp.dword[2]);  // ← 꼭 필요
+    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 12,  comp.dword[3]);
+    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 16,  comp.dword[4]);
+
+    /* 3) Tail 인덱스 업데이트 */
+    g_hostDmaStatus.fifoTail.autoDmaRx =
+        (g_hostDmaStatus.fifoTail.autoDmaRx + 1) & 0xFF;
 }
 
 void check_direct_tx_dma_done()

@@ -135,6 +135,7 @@ void InitDataBuf()
 
 	regressionBufMapPtr->head = 0;
 	regressionBufMapPtr->tail = 0;
+
 	for (int i = 0; i < MAX_SAMPLES; i++) {
 	    regressionBufMapPtr->regressionEnrty[i].util = 0;
 	    regressionBufMapPtr->regressionEnrty[i].valid_page = 0;
@@ -558,128 +559,31 @@ unsigned int AllocateDSMBuf()
 	return allocEntry;
 }
 
-//void TRIM (unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check)
-//{
-//	XTime tStart, tEnd;
-//	XTime tTime;
-//	unsigned int lsa, bufEntry, xtime_hi, xtime_lo;
-//	lsa = lba/4;
-//
-//	if (check == 1)
-//		if (asyncTrimBitMapPtr->writeBitMap[lsa/64] & (1ULL << (lsa % 64)))
-//		{
-//			trim_invalid += 1;
-//			return;
-//		}
-//
-//	bufEntry = CheckDataBufHitbyLSA(lsa);
-//	if (bufEntry != DATA_BUF_FAIL)
-//	{
-//        if (blk0 == 0)
-//        {
-//            dataBufMapPtr->dataBuf[bufEntry].blk0 = 0;
-//        }
-//        if (blk1 == 0)
-//        {
-//            dataBufMapPtr->dataBuf[bufEntry].blk1 = 0;
-//        }
-//        if (blk2 == 0)
-//        {
-//            dataBufMapPtr->dataBuf[bufEntry].blk2 = 0;
-//        }
-//        if (blk3 == 0)
-//        {
-//            dataBufMapPtr->dataBuf[bufEntry].blk3 = 0;
-//        }
-//        if ((dataBufMapPtr->dataBuf[bufEntry].blk0 == 0) &&
-//            (dataBufMapPtr->dataBuf[bufEntry].blk1 == 0) &&
-//            (dataBufMapPtr->dataBuf[bufEntry].blk2 == 0) &&
-//            (dataBufMapPtr->dataBuf[bufEntry].blk3 == 0))
-//        {
-////			XTime_GetTime(&tStart);
-//            unsigned int prevBufEntry, nextBufEntry;
-//            prevBufEntry = dataBufMapPtr->dataBuf[bufEntry].prevEntry;
-//            nextBufEntry = dataBufMapPtr->dataBuf[bufEntry].nextEntry;
-//
-//            if (prevBufEntry != DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
-//                dataBufMapPtr->dataBuf[prevBufEntry].nextEntry = nextBufEntry;
-//                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = prevBufEntry;
-//                nextBufEntry = DATA_BUF_NONE;
-//                prevBufEntry = dataBufLruList.tailEntry;
-//                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
-//                dataBufLruList.tailEntry = bufEntry;
-//            } else if (prevBufEntry != DATA_BUF_NONE && nextBufEntry == DATA_BUF_NONE) {
-//                dataBufLruList.tailEntry = bufEntry;
-//            } else if (prevBufEntry == DATA_BUF_NONE && nextBufEntry != DATA_BUF_NONE) {
-//                dataBufMapPtr->dataBuf[nextBufEntry].prevEntry = DATA_BUF_NONE;
-//                dataBufLruList.headEntry = nextBufEntry;
-//                prevBufEntry = dataBufLruList.tailEntry;
-//                dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
-//                dataBufLruList.tailEntry = bufEntry;
-//            } else {
-//                prevBufEntry = DATA_BUF_NONE;
-//                nextBufEntry = DATA_BUF_NONE;
-//                dataBufLruList.headEntry = bufEntry;
-//                dataBufLruList.tailEntry = bufEntry;
-//            }
-//            SelectiveGetFromDataBufHashList(bufEntry);
-//            dataBufMapPtr->dataBuf[bufEntry].blockingReqTail = REQ_SLOT_TAG_NONE;
-//            dataBufMapPtr->dataBuf[bufEntry].dirty = DATA_BUF_CLEAN;
-//            dataBufMapPtr->dataBuf[bufEntry].reserved0 = 0;
-////			XTime_GetTime(&tEnd);
-////			tTime = (tEnd - tStart);
-////			xtime_hi = (unsigned int)(tTime >> 32);
-////			xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
-////			xil_printf("Write Buffer: %u\r\n", xtime_lo);
-//        }
-//	}
-//	unsigned int virtualSliceAddr = logicalSliceMapPtr->logicalSlice[lsa].virtualSliceAddr;
-//	if (virtualSliceAddr != VSA_NONE) {
-//		if (blk0 == 0) {
-//			logicalSliceMapPtr->logicalSlice[lsa].blk0 = 0;
-//		}
-//		if (blk1 == 0) {
-//			logicalSliceMapPtr->logicalSlice[lsa].blk1 = 0;
-//		}
-//		if (blk2 == 0) {
-//			logicalSliceMapPtr->logicalSlice[lsa].blk2 = 0;
-//		}
-//		if (blk3 == 0) {
-//			logicalSliceMapPtr->logicalSlice[lsa].blk3 = 0;
-//		}
-//		if ((logicalSliceMapPtr->logicalSlice[lsa].blk0 == 0) &&
-//			(logicalSliceMapPtr->logicalSlice[lsa].blk1 == 0) &&
-//			(logicalSliceMapPtr->logicalSlice[lsa].blk2 == 0) &&
-//	        (logicalSliceMapPtr->logicalSlice[lsa].blk3 == 0))
-//		{
-//			realtrimmedRange += 4;
-//
-////			XTime_GetTime(&tStart);
-//			InvalidateOldVsa(lsa);
-////			XTime_GetTime(&tEnd);
-////			tTime = (tEnd - tStart);
-////			xtime_hi = (unsigned int)(tTime >> 32);
-////			xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
-////			xil_printf("InvalidateOldVsa: %u\r\n", xtime_lo);
-//		}
-//	}
-//}
-
 void TRIM(unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int blk2, unsigned int blk3, unsigned int check)
 {
-    unsigned int lsa = lba / 4;
+	XTime tStart, tEnd;
+	XTime tTime;
+	unsigned int xtime_hi, xtime_lo, map, buff;
 
-    // Early return for invalid cases
+	unsigned int lsa = lba / 4;
+	map = 0;
+	buff = 0;
+
     if (check && (asyncTrimBitMapPtr->writeBitMap[lsa / 64] & (1ULL << (lsa % 64)))) {
         trim_invalid++;
         return;
     }
 
+    XTime_GetTime(&tStart);
     unsigned int bufEntry = CheckDataBufHitbyLSA(lsa);
+    XTime_GetTime(&tEnd);
+    tTime = (tEnd - tStart);
+    xtime_hi = (unsigned int)(tTime >> 32);
+    xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
+
     if (bufEntry != DATA_BUF_FAIL) {
         DATA_BUF_ENTRY *buf = &dataBufMapPtr->dataBuf[bufEntry];
 
-        // 블록 값 직접 갱신 (비트 연산 최적화)
         buf->blk0 = blk0 ? buf->blk0 : 0;
         buf->blk1 = blk1 ? buf->blk1 : 0;
         buf->blk2 = blk2 ? buf->blk2 : 0;
@@ -688,39 +592,37 @@ void TRIM(unsigned int lba, unsigned int blk0, unsigned int blk1, unsigned int b
         // 전체 blk가 0인지 빠른 검사
         if (!(buf->blk0 | buf->blk1 | buf->blk2 | buf->blk3)) {
             // LRU 리스트에서 현재 bufEntry 제거 후 tail로 이동
-            unsigned int prev = buf->prevEntry;
-            unsigned int next = buf->nextEntry;
-
-            if (prev != DATA_BUF_NONE)
-                dataBufMapPtr->dataBuf[prev].nextEntry = next;
-            else
-                dataBufLruList.headEntry = next;
-
-            if (next != DATA_BUF_NONE)
-                dataBufMapPtr->dataBuf[next].prevEntry = prev;
-            else
-                dataBufLruList.tailEntry = prev;
-
-            // tail로 이동
-            if (dataBufLruList.tailEntry != bufEntry) {
-                if (dataBufLruList.tailEntry != DATA_BUF_NONE)
-                    dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
-                buf->prevEntry = dataBufLruList.tailEntry;
-                buf->nextEntry = DATA_BUF_NONE;
-                dataBufLruList.tailEntry = bufEntry;
-
-                if (dataBufLruList.headEntry == DATA_BUF_NONE)
-                    dataBufLruList.headEntry = bufEntry;
-            }
-
-            // 상태값 클리어
-            SelectiveGetFromDataBufHashList(bufEntry);
-            buf->blockingReqTail = REQ_SLOT_TAG_NONE;
+//            unsigned int prev = buf->prevEntry;
+//            unsigned int next = buf->nextEntry;
+//
+//            if (prev != DATA_BUF_NONE)
+//                dataBufMapPtr->dataBuf[prev].nextEntry = next;
+//            else
+//                dataBufLruList.headEntry = next;
+//
+//            if (next != DATA_BUF_NONE)
+//                dataBufMapPtr->dataBuf[next].prevEntry = prev;
+//            else
+//                dataBufLruList.tailEntry = prev;
+//
+//            // tail로 이동
+//            if (dataBufLruList.tailEntry != bufEntry) {
+//                if (dataBufLruList.tailEntry != DATA_BUF_NONE)
+//                    dataBufMapPtr->dataBuf[dataBufLruList.tailEntry].nextEntry = bufEntry;
+//                buf->prevEntry = dataBufLruList.tailEntry;
+//                buf->nextEntry = DATA_BUF_NONE;
+//                dataBufLruList.tailEntry = bufEntry;
+//
+//                if (dataBufLruList.headEntry == DATA_BUF_NONE)
+//                    dataBufLruList.headEntry = bufEntry;
+//            }
+//
+//            // 상태값 클리어
+//            SelectiveGetFromDataBufHashList(bufEntry);
+//            buf->blockingReqTail = REQ_SLOT_TAG_NONE;
             buf->dirty = DATA_BUF_CLEAN;
-            buf->reserved0 = 0;
         }
     }
-
     LOGICAL_SLICE_ENTRY *slice = &logicalSliceMapPtr->logicalSlice[lsa];
     if (slice->virtualSliceAddr != VSA_NONE) {
         slice->blk0 = blk0 ? slice->blk0 : 0;
@@ -740,23 +642,37 @@ unsigned int cmp(const void *a, const void *b) {
 }
 
 void add_sample(unsigned int util, unsigned int valid_page) {
+
+//    xil_printf("ADD Util: %d, ", util);
+//    xil_printf("ADD Valid Page: %d\r\n", valid_page);
+    if (regressionBufMapPtr->head != regressionBufMapPtr->tail) {
+        unsigned int last_index = (regressionBufMapPtr->tail + MAX_SAMPLES - 1) % MAX_SAMPLES;
+        unsigned int last_valid = regressionBufMapPtr->regressionEnrty[last_index].valid_page;
+
+        if (valid_page == 0 || (last_valid >= 10 && valid_page < last_valid / 2)) {
+            return;
+        }
+    }
+
     unsigned int index = regressionBufMapPtr->tail;
     if ((regressionBufMapPtr->tail + 1) % MAX_SAMPLES == regressionBufMapPtr->head) {
-        int old_util = regressionBufMapPtr->regressionEnrty[regressionBufMapPtr->head].util;
-        util_count[old_util]--;
         regressionBufMapPtr->head = (regressionBufMapPtr->head + 1) % MAX_SAMPLES;
     }
     regressionBufMapPtr->regressionEnrty[index].util = util;
     regressionBufMapPtr->regressionEnrty[index].valid_page = valid_page;
     regressionBufMapPtr->tail = (regressionBufMapPtr->tail + 1) % MAX_SAMPLES;
-    util_count[util]++;
+}
+
+void empty_sample() {
+    regressionBufMapPtr->head = 0;
+    regressionBufMapPtr->tail = 0;
 }
 
 unsigned int get_sample_count() {
     if (regressionBufMapPtr->tail >= regressionBufMapPtr->head)
         return regressionBufMapPtr->tail - regressionBufMapPtr->head;
     else
-        return MAX_SAMPLES;
+        return MAX_SAMPLES - regressionBufMapPtr->head + regressionBufMapPtr->tail;
 }
 
 void train_model() {
@@ -768,8 +684,10 @@ void train_model() {
     int total = 0;
 
     for (int i = 0; i < count; i++) {
-        int x = regressionBufMapPtr->regressionEnrty[idx].util;
-        int y = regressionBufMapPtr->regressionEnrty[idx].valid_page;
+        int x = regressionBufMapPtr->regressionEnrty[idx].util;         // 0~100
+        int y = regressionBufMapPtr->regressionEnrty[idx].valid_page;   // 0~128
+//        xil_printf("Train Util: %d, ", x);
+//        xil_printf("Train Valid Page: %d\r\n", y);
 
         if (x != util_first)
             util_all_same = 0;
@@ -786,7 +704,7 @@ void train_model() {
     if (util_all_same) {
         reg_model.a_fixed = 0;
         reg_model.b_fixed = 0;
-        reg_model.fallback_value = total / count;
+        reg_model.fallback_value = (total + count / 2) / count; // 반올림 처리
         reg_model.valid = 0;
         fallback_cnt++;
         return;
@@ -795,8 +713,19 @@ void train_model() {
     int n = count;
     int denom = n * sum_xx - sum_x * sum_x;
 
-    reg_model.a_fixed = (int)(((n * sum_xy - sum_x * sum_y) * 1000) / denom);
-    reg_model.b_fixed = (int)((sum_y * 1000 - (int)(reg_model.a_fixed) * sum_x) / n);
+    // denom이 0인 경우 추가 처리
+    if (denom == 0) {
+        reg_model.a_fixed = 0;
+        reg_model.b_fixed = 0;
+        reg_model.fallback_value = (total + count / 2) / count;
+        reg_model.valid = 0;
+        fallback_cnt++;
+        return;
+    }
+
+    // 더 정확한 실수 연산 후 반올림하여 고정 소수점으로 변환
+    reg_model.a_fixed = (int)((((double)(n * sum_xy - sum_x * sum_y)) * 1000.0 / denom) + 0.5);
+    reg_model.b_fixed = (int)((((double)(sum_y * sum_xx - sum_x * sum_xy)) * 1000.0 / denom) + 0.5);
     reg_model.fallback_value = 0;
     reg_model.valid = 1;
     train_cnt++;
@@ -804,10 +733,16 @@ void train_model() {
 
 unsigned int predict_valid_page(int util) {
     if (!reg_model.valid) {
-    	return_fb++;
+        return_fb++;
         return reg_model.fallback_value;
     }
+
     int predicted = (reg_model.a_fixed * util + reg_model.b_fixed) / 1000;
+
+    // 범위 제한: 최소 0, 최대 128
+    if (predicted < 0) predicted = 0;
+    if (predicted > 128) predicted = 128;
+
     int a_int = reg_model.a_fixed / 1000;
     int a_frac = reg_model.a_fixed % 1000;
     if (a_frac < 0) a_frac = -a_frac;
@@ -818,3 +753,4 @@ unsigned int predict_valid_page(int util) {
     return_rg++;
     return predicted;
 }
+
