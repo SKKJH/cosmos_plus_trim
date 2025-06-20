@@ -49,6 +49,7 @@
 #include <assert.h>
 #include "memory_map.h"
 #include "nvme/host_lld.h"
+#include <stdlib.h>
 
 P_REQ_POOL reqPoolPtr;
 FREE_REQUEST_QUEUE freeReqQ;
@@ -354,7 +355,6 @@ void PerformDeallocation(unsigned int reqSlotTag)
 	unsigned int *devAddr = (unsigned int*)GenerateDataBufAddr(reqSlotTag);
 	unsigned int nr = reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nr;
 
-
 	if (g_time_cnt == 0) {
 //		xil_printf("DISCARD REQ\r\n");
 //		for (int i = 0; i < nr; i++) {
@@ -370,16 +370,10 @@ void PerformDeallocation(unsigned int reqSlotTag)
 		return;
 	}
 
-//	if (tb_start < 2)
-//		xil_printf("DISCARD REQ\r\n");
-
 	for (int i = 0; i < nr; i++) {
 
         unsigned int tempval  = *(devAddr + 1);
         unsigned int tempval2 = *(devAddr + 2);
-
-//        if (tb_start < 2)
-//        	xil_printf("REQ(%d) slba: %u, nlb: %u, ", i, tempval2, tempval);
 
         if (tempval >= (SLICES_PER_SSD * 4) || tempval2 >= (SLICES_PER_SSD * 4)) {
         	err++;
@@ -388,7 +382,7 @@ void PerformDeallocation(unsigned int reqSlotTag)
         trim_cnt++;
 
         XTime_GetTime(&tStart);
-        if ((tempval > 8) && (tb_start > 0)) {
+        if ((tempval > 0) && (tb_start > -1)) {
         	async_req_blcok += tempval;
         	async_trim_buf++;
         	unsigned int newEntry = AllocateDSMBuf();
@@ -439,161 +433,44 @@ void PerformDeallocation(unsigned int reqSlotTag)
         xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
         req_xtime_lo += xtime_lo;
 	}
-//	if (tb_start < 2)
-//		xil_printf("\r\n");
 
     total_us += req_xtime_lo;
 //    xil_printf("TRIM: %u Overheads\r\n", req_xtime_lo);
 	trim_flag--;
 }
 
-//void PerformDeallocation(unsigned int reqSlotTag)
-//{
-//	XTime tStart, tEnd;
-//	XTime tTime;
-//    unsigned int xtime_hi;
-//    unsigned int xtime_lo;
-//
-//    unsigned int tempval, tempval2;
-//	unsigned int *devAddr = (unsigned int*)GenerateDataBufAddr(reqSlotTag);
-//	unsigned int nr = reqPoolPtr->reqPool[reqSlotTag].nvmeDmaInfo.nr;
-//	unsigned int newEntry;
-//
-//	if (g_time_cnt == 0)
-//	{
-//		trim_flag -= 1;
-//		return;
-//	}
-//
-//	for (int i=0; i<nr; i++)
-//	{
-//        tempval = *(devAddr + 1);
-//        tempval2 = *(devAddr + 2);
-//
-//        if (((SLICES_PER_SSD * 4) < tempval) || ((SLICES_PER_SSD * 4) < tempval2))
-//        {
-//        	err++;
-//        	break;
-//        }
-//        trim_cnt++;
-//
-//        if (tempval > 257)
-//        {
-//        	async_req_blcok += tempval;
-//        	async_trim_buf += 1;
-//        	newEntry = AllocateDSMBuf();
-//        	dsmRangePtr->dsmRange[newEntry].lengthInLogicalBlocks = tempval;
-//        	dsmRangePtr->dsmRange[newEntry].RealLB = tempval;
-//        	dsmRangePtr->dsmRange[newEntry].startingLBA[0] = tempval2;
-//        	dsmRangePtr->dsmRange[newEntry].flag = 0;
-//
-//        	XTime_GetTime(&tStart);
-//        	PutToDsmRangeHashList(newEntry);
-//    		XTime_GetTime(&tEnd);
-//    		tTime = (tEnd - tStart);
-//    		xtime_hi = (unsigned int)(tTime >> 32);
-//    		xtime_lo = (unsigned int)(tTime & 0xFFFFFFFFU);
-//
-//    		do_trim_flag = 1;
-////    		xil_printf("PutToDsmRangeHashList: %u\r\n", xtime_lo);
-//        }
-//        else
-//        {
-//        	sync_trim_buf += 1;
-//            int blk0, blk1, blk2, blk3;
-//            unsigned int slba, nlb;
-//
-//        	sync_trim_cnt += tempval;
-//            nlb = tempval;
-//            slba = tempval2;
-//        	blk0 = blk1 = blk2 = blk3 = 1;
-//
-//        	switch (slba % 4)
-//        	{
-//        	case 0:
-//        		if (nlb == 1) {
-//        			blk0 = 0;
-//        		}
-//        		else if (nlb == 2) {
-//        			blk0 = 0;
-//        			blk1 = 0;
-//        		}
-//        		else if (nlb == 3) {
-//        			blk0 = 0;
-//        			blk1 = 0;
-//        			blk2 = 0;
-//        		}
-//        		else {
-//        			blk0 = 0;
-//        			blk1 = 0;
-//        			blk2 = 0;
-//        			blk3 = 0;
-//        		}
-//        		break;
-//        	case 1:
-//        		if (nlb == 1) {
-//        			blk1 = 0;
-//        		}
-//        		else if (nlb == 2) {
-//        			blk1 = 0;
-//        			blk2 = 0;
-//        		}
-//        		else {
-//        			blk1 = 0;
-//        			blk2 = 0;
-//        			blk3 = 0;
-//        		}
-//        		break;
-//        	case 2:
-//        		if (nlb == 1) {
-//        			blk2 = 0;
-//        		}
-//        		else {
-//        			blk2 = 0;
-//        			blk3 = 0;
-//        		}
-//        		break;
-//        	case 3:
-//        		blk3 = 0;
-//        		break;
-//        	}
-//        	TRIM(slba, blk0, blk1, blk2, blk3, 0);
-//        	while (nlb > 4)
-//        	{
-//        		TRIM(slba, 0, 0, 0, 0, 0);
-//        		slba += 4;
-//        		nlb  -= 4;
-//        	}
-//        	blk0 = blk1 = blk2 = blk3 = 1;
-//        	switch (nlb)
-//        	{
-//        	case 1:
-//        		blk0 = 0;
-//        		break;
-//        	case 2:
-//        		blk0 = 0;
-//        		blk1 = 0;
-//        		break;
-//        	case 3:
-//        		blk0 = 0;
-//        		blk1 = 0;
-//        		blk2 = 0;
-//        		break;
-//        	case 4:
-//        		blk0 = 0;
-//        		blk1 = 0;
-//        		blk2 = 0;
-//        		blk3 = 0;
-//        		break;
-//        	}
-//        	if (nlb > 0)
-//        		TRIM(slba, blk0, blk1, blk2, blk3, 0);
-//        }
-//    	devAddr += 4;
-//	}
-//
-//	trim_flag -= 1;
-//}
+void ForceDeallocation(int nlb)
+{
+	unsigned long long max_lba = 7340032;
+	unsigned int max_index = max_lba / 4;
+	unsigned int slba = (rand() % max_index) * 4;
+
+	int blk0, blk1, blk2, blk3;
+	// 1. 앞부분 unaligned 처리
+	unsigned int mod = slba % 4;
+	unsigned int partial_len = (mod == 0) ? 0 : 4 - mod;
+	if (partial_len > nlb) partial_len = nlb;
+
+	if (partial_len > 0) {
+		set_trim_mask(mod, partial_len, &blk0, &blk1, &blk2, &blk3);
+		TRIM(slba, blk0, blk1, blk2, blk3, 0);
+		slba += partial_len;
+		nlb  -= partial_len;
+	}
+
+	// 2. 정렬된 구간 처리 (4개 단위)
+	while (nlb >= 4) {
+		TRIM(slba, 0, 0, 0, 0, 0);
+		slba += 4;
+		nlb  -= 4;
+	}
+
+	// 3. 뒷부분 남은 블록 처리
+	if (nlb > 0) {
+		set_trim_mask(0, nlb, &blk0, &blk1, &blk2, &blk3);
+		TRIM(slba, blk0, blk1, blk2, blk3, 0);
+	}
+}
 
 void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
 {
@@ -601,7 +478,6 @@ void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
 //		XTime tTime;
 //	    unsigned int xtime_hi;
 //	    unsigned int xtime_lo;
-
 	if (reqPoolPtr->reqPool[reqSlotTag].reqCode == REQ_CODE_DSM)
 	{
 		reqPoolPtr->dsmReqList[dsmCount++] = reqSlotTag;
@@ -616,8 +492,6 @@ void SelectiveGetFromNvmeDmaReqQ(unsigned int reqSlotTag)
 			PerformDeallocation(reqPoolPtr->dsmReqList[i]);
 			complete_rx_dma(reqPoolPtr->reqPool[reqSlotTag].nvmeCmdSlotTag);
 		}
-
-
 //		XTime_GetTime(&tEnd);
 //		tTime = (tEnd - tStart);
 //		xtime_hi = (unsigned int)(tTime >> 32);

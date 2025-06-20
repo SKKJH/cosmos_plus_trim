@@ -204,7 +204,7 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
     unsigned int trimmedRange = 0;
     int tcheck = 0;
 
-    Range = Range * 2000;
+    Range = Range / 4;
     bufEntry = DATA_BUF_NONE;
 
     // 가장 높은 해시 인덱스부터 유효한 DSM 범위를 찾음
@@ -234,6 +234,7 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
                 TRIM(slba, blk0, blk1, blk2, blk3, 1);
                 tcheck = 1;
                 trimmedRange += partial_len;
+                force_trim_size += partial_len;
                 slba += partial_len;
                 nlb  -= partial_len;
             }
@@ -243,6 +244,7 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
                 TRIM(slba, 0, 0, 0, 0, 1);
                 tcheck = 1;
                 trimmedRange += 4;
+                force_trim_size += 4;
                 slba += 4;
                 nlb  -= 4;
 
@@ -269,6 +271,7 @@ void handle_asyncTrim(unsigned int forced, unsigned int Range)
                 TRIM(slba, blk0, blk1, blk2, blk3, 1);
                 tcheck = 1;
                 trimmedRange += nlb;
+                force_trim_size += nlb;
             }
         }
 

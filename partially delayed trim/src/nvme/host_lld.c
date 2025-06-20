@@ -356,7 +356,6 @@ void set_io_cq(unsigned int ioCqIdx, unsigned int valid, unsigned int irqEn, uns
 
 }
 
-
 void set_direct_tx_dma(unsigned int devAddr, unsigned int pcieAddrH, unsigned int pcieAddrL, unsigned int len)
 {
 	HOST_DMA_CMD_FIFO_REG hostDmaReg;
@@ -476,27 +475,8 @@ void set_auto_rx_dma(unsigned int cmdSlotTag, unsigned int cmd4KBOffset, unsigne
 	g_hostDmaStatus.autoDmaRxCnt++;
 }
 
-//void complete_rx_dma(unsigned int slotTag)
-//{
-//	xil_printf("completion slotTag: %u\r\n", slotTag);
-//    HOST_DMA_CMD_FIFO_REG comp = {0};
-//
-//    comp.dmaType       = HOST_DMA_AUTO_TYPE;
-//    comp.dmaDirection  = HOST_DMA_RX_DIRECTION;
-//    comp.cmd4KBOffset  = 0;        // 의미 없음
-//    comp.dmaLen        = 0;        // 길이 0 → 실전송 없음
-//    comp.cmdSlotTag    = slotTag;  // 동일 Tag
-//    comp.autoCompletion= 1;        // ★ Completion 발생
-//
-//    /* FIFO에 더미 엔트리 PUSH */
-//    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR,      comp.dword[0]);
-//    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 12, comp.dword[3]);
-//    IO_WRITE32(HOST_DMA_CMD_FIFO_REG_ADDR + 16, comp.dword[4]);
-//}
-
 void complete_rx_dma(unsigned int slotTag)
 {
-//	xil_printf("complete_rx_dma: %u\r\n", slotTag);
     /* 1) 먼저 FIFO에 한 칸 이상 비어 있는지 확인 */
     g_hostDmaStatus.fifoHead.dword = IO_READ32(HOST_DMA_FIFO_CNT_REG_ADDR);
     while ((g_hostDmaStatus.fifoTail.autoDmaRx + 1) % 256 ==

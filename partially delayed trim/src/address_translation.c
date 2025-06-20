@@ -701,7 +701,8 @@ unsigned int FindFreeVirtualSlice()
 			virtualDieMapPtr->die[dieNo].currentBlock = currentBlock;
 		else
 		{
-			GarbageCollection(dieNo);
+//			dieNo = dTRIM_GarbageCollection();
+			dieNo = GarbageCollection();
 
 			currentBlock = virtualDieMapPtr->die[dieNo].currentBlock;
 			if(virtualBlockMapPtr->block[dieNo][currentBlock].currentPage == USER_PAGES_PER_BLOCK)

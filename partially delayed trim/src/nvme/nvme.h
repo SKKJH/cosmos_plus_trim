@@ -903,6 +903,7 @@ unsigned int gc_trim_cnt;
 unsigned int sync_trim_cnt;
 unsigned int asynctrim;
 unsigned int gctrim;
+unsigned int force_trim_size;
 unsigned int bufnone;
 unsigned int forcereturn;
 unsigned int err;
@@ -925,5 +926,8 @@ int train_thres;
 unsigned int tcheck;
 unsigned int pcheck;
 unsigned int time_cnt;
+
+int u70, u75, u80, u85, u90, u95;
+int utrim;
 
 #endif	//__NVME_H_

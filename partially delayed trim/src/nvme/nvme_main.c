@@ -76,6 +76,7 @@ void nvme_main()
 	XTime tTime;
 	unsigned int exeLlr;
 	unsigned int rstCnt = 0;
+	utrim = u70 = u75 = u80 = u85 = u90 = u95 = 0;
 
 	time_cnt = 0;
 	dsmCount = 0;
@@ -262,7 +263,7 @@ void nvme_main()
 			if (time_cnt > g_time_cnt)
 			{
 				time_cnt = 0;
-				handle_asyncTrim(0,0);
+//				handle_asyncTrim(0,0);
 			}
 		}
 	}

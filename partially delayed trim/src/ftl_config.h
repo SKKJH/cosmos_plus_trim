@@ -183,10 +183,10 @@
 #define	MLC_MODE				2
 
 //************************************************************************
-#define	BITS_PER_FLASH_CELL		SLC_MODE	//user configurable factor
-#define	USER_BLOCKS_PER_LUN		2048		//user configurable factor
-#define	USER_CHANNELS			8   		//(NUMBER_OF_CONNECTED_CHANNEL)		//user configurable factor
-#define	USER_WAYS				2			//user configurable factor
+#define	BITS_PER_FLASH_CELL		SLC_MODE
+#define	USER_BLOCKS_PER_LUN		2048
+#define	USER_CHANNELS			2   		//8
+#define	USER_WAYS				2
 //************************************************************************
 //#define	BITS_PER_FLASH_CELL		SLC_MODE	//user configurable factor
 //#define	USER_BLOCKS_PER_LUN		512		//user configurable factor

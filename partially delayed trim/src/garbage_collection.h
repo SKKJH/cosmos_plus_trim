@@ -59,7 +59,10 @@ typedef struct _GC_VICTIM_MAP {
 } GC_VICTIM_MAP, *P_GC_VICTIM_MAP;
 
 void InitGcVictimMap();
-void GarbageCollection(unsigned int dieNo);
+unsigned int SelectBestDieForGC();
+//void GarbageCollection(unsigned int dieNo);
+unsigned int GarbageCollection();
+unsigned int dTRIM_GarbageCollection();
 
 void PutToGcVictimList(unsigned int dieNo, unsigned int blockNo, unsigned int invalidSliceCnt);
 unsigned int GetFromGcVictimList(unsigned int dieNo);
